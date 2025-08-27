@@ -178,8 +178,9 @@ def generate_intelligent_brd_section(
         )
         human_message = HumanMessage(content=user_prompt)
         
-        # Get response from ChatOpenAI
-        response = llm([system_message, human_message])
+        # Get response from ChatOpenAI using invoke method
+        messages = [system_message, human_message]
+        response = llm.invoke(messages)
         return response.content
     except Exception as e:
         logger.error(f"Error generating {section_name}: {str(e)}")
