@@ -300,5 +300,6 @@ def process_document(uploaded_file, extract_images: bool = True, extract_formula
         
     except Exception as e:
         logger.error(f"Error processing document: {e}")
-        st.error(f"Error processing document: {str(e)}")
+        if 'st' in globals():
+            st.error(f"Error processing document: {str(e)}")
         return "", {}, [], {}
