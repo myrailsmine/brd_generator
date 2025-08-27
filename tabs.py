@@ -81,12 +81,47 @@ def render_document_analysis_tab(uploaded_file, extraction_options: Dict[str, An
                 if document_analysis.get('regulatory_framework'):
                     frameworks = ', '.join(document_analysis['regulatory_framework'])
                     st.info(f"**Regulatory Frameworks:** {frameworks}")
+                
+                math_complexity = document_analysis.get('mathematical_complexity', 'Unknown')
+                st.info(f"**Mathematical Complexity:** {math_complexity}")
             
             with col2:
                 if document_analysis.get('key_entities'):
                     st.success(f"**Key Entities Found:** {len(document_analysis['key_entities'])}")
-                if document_analysis.get('stakeholder_mentions'):
-                    st.success(f"**Stakeholders Detected:** {len(document_analysis['stakeholder_mentions'])}")
+                if document_analysis.get('regulatory_sections'):
+                    st.success(f"**Regulatory Sections:** {len(document_analysis['regulatory_sections'])}")
+                
+                table_count = document_analysis.get('table_count', 0)
+                st.success(f"**Tables Detected:** {table_count}")
+            
+            # Enhanced regulatory insights
+            if document_analysis.get('formula_types'):
+                st.subheader("Mathematical Content Analysis")
+                formula_types = document_analysis['formula_types']
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Formula Types", len(formula_types))
+                with col2:
+                    complexity_score = document_analysis.get('complexity_score', 0)
+                    st.metric("Complexity Score", f"{complexity_score:.2f}")
+                with col3:
+                    total_formulas = len(extracted_formulas)
+                    st.metric("Total Elements", total_formulas)
+                
+                # Formula type breakdown
+                if formula_types:
+                    st.write("**Formula Types Detected:**")
+                    for ftype in formula_types[:10]:  # Show top 10 types
+                        type_name = ftype.replace('_', ' ').title()
+                        count = len([f for f in extracted_formulas if isinstance(f, dict) and f.get('type') == ftype])
+                        st.write(f"• {type_name}: {count} instances")
+            
+            # Regulatory sections preview
+            if document_analysis.get('regulatory_sections'):
+                with st.expander("Regulatory Sections Detected"):
+                    for section in document_analysis['regulatory_sections'][:15]:
+                        st.write(f"• {section[:100]}...")
             
             # Preview extracted content
             with st.expander("Content Preview", expanded=False):
@@ -104,10 +139,54 @@ def render_document_analysis_tab(uploaded_file, extraction_options: Dict[str, An
                                 display_image_from_base64(img_b64, caption=img_key, max_width=150)
                     
                     if extracted_formulas:
-                        st.subheader("Mathematical Formulas")
-                        for i, formula in enumerate(extracted_formulas[:15]):
-                            with st.expander(f"Formula {i+1}"):
-                                st.code(formula, language="text")
+                        st.subheader("Mathematical Formulas and Regulatory Elements")
+                        
+                        # Group formulas by type for better organization
+                        formula_groups = {}
+                        for formula in extracted_formulas[:20]:  # Show top 20
+                            if isinstance(formula, dict):
+                                formula_type = formula.get('type', 'unknown')
+                                confidence = formula.get('confidence', 0)
+                                
+                                if formula_type not in formula_groups:
+                                    formula_groups[formula_type] = []
+                                formula_groups[formula_type].append(formula)
+                        
+                        # Display grouped formulas
+                        for formula_type, formulas_list in formula_groups.items():
+                            type_name = formula_type.replace('_', ' ').title()
+                            with st.expander(f"{type_name} ({len(formulas_list)} items)"):
+                                for i, formula in enumerate(formulas_list):
+                                    col1, col2, col3 = st.columns([3, 1, 1])
+                                    with col1:
+                                        st.code(formula.get('text', ''), language="text")
+                                    with col2:
+                                        confidence = formula.get('confidence', 0)
+                                        st.metric("Confidence", f"{confidence:.1%}")
+                                    with col3:
+                                        if formula.get('page'):
+                                            st.write(f"Page {formula['page']}")
+                                    
+                                    # Show context if available
+                                    if formula.get('context'):
+                                        st.caption(f"Context: {formula['context'][:100]}...")
+                                    st.markdown("---")
+                        
+                        # Summary statistics
+                        st.subheader("Formula Analysis Summary")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            total_formulas = len(extracted_formulas)
+                            st.metric("Total Elements", total_formulas)
+                        with col2:
+                            high_conf = len([f for f in extracted_formulas if isinstance(f, dict) and f.get('confidence', 0) > 0.7])
+                            st.metric("High Confidence", high_conf)
+                        with col3:
+                            formula_types = len(set(f.get('type', 'unknown') for f in extracted_formulas if isinstance(f, dict)))
+                            st.metric("Formula Types", formula_types)
+                        with col4:
+                            math_complexity = document_analysis.get('mathematical_complexity', 'Unknown')
+                            st.metric("Complexity", math_complexity)
     else:
         st.info("Please upload a document to begin AI-powered analysis")
         
