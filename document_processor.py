@@ -169,7 +169,7 @@ def display_image_from_base64(img_b64: str, caption: str = "", max_width: int = 
         if max_width:
             img.thumbnail((max_width, max_width))
         
-        st.image(img, caption=caption, use_column_width=True if not max_width else False)
+        st.image(img, caption=caption, use_container_width=True if not max_width else False)
     except Exception as e:
         logger.error(f"Error displaying image: {str(e)}")
         st.error(f"Error displaying image: {caption}")
