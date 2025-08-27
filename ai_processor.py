@@ -2,7 +2,6 @@
 AI Processing Utilities
 """
 
-
 import streamlit as st
 import pandas as pd
 import re
@@ -92,53 +91,88 @@ def generate_intelligent_brd_section(
     section_config: Dict[str, Any], 
     document_text: str, 
     images: Dict[str, str], 
-    formulas: List[str], 
+    formulas: List[Any], 
     document_analysis: Dict[str, Any]
 ) -> str:
-    """Generate BRD section with enhanced AI intelligence"""
+    """Generate BRD section with enhanced AI intelligence for regulatory documents"""
     
     if llm is None:
-        logger.warning("LLM not available, generating placeholder content")
-        return generate_placeholder_content(section_name, section_config)
+        logger.warning("LLM not available, generating enhanced placeholder content")
+        return generate_enhanced_placeholder_content(section_name, section_config, formulas, document_analysis)
     
-    # Context enhancement based on document analysis
-    context_enhancement = f"""
-    Document Analysis Context:
+    # Handle both old format (list of strings) and new format (list of dicts)
+    formula_summary = ""
+    if formulas:
+        formula_types = set()
+        high_priority_formulas = []
+        formula_count = len(formulas)
+        
+        for formula in formulas:
+            if isinstance(formula, dict):
+                formula_types.add(formula.get('type', 'unknown'))
+                if formula.get('confidence', 0) > 0.7:
+                    high_priority_formulas.append(formula)
+            else:
+                # Handle old string format
+                formula_types.add('basic_formula')
+                high_priority_formulas.append({'text': str(formula), 'type': 'basic_formula'})
+        
+        formula_summary = f"""
+        Mathematical Content Analysis:
+        - Total formulas extracted: {formula_count}
+        - Formula types: {', '.join(formula_types)}
+        - Mathematical complexity: {document_analysis.get('mathematical_complexity', 'Unknown')}
+        - Key formulas: {len(high_priority_formulas)} high-confidence formulas
+        """
+        
+        if high_priority_formulas:
+            formula_summary += "\nHigh-Priority Formulas:\n"
+            for i, formula in enumerate(high_priority_formulas[:5]):  # Top 5 formulas
+                if isinstance(formula, dict):
+                    formula_text = formula.get('text', '')
+                else:
+                    formula_text = str(formula)
+                formula_summary += f"- {formula_text[:100]}...\n"
+    
+    regulatory_context = f"""
+    Regulatory Document Analysis:
     - Document Type: {document_analysis.get('document_type', 'Unknown')}
     - Regulatory Frameworks: {', '.join(document_analysis.get('regulatory_framework', []))}
-    - Complexity Level: {document_analysis.get('complexity_score', 0):.1f}/1.0
-    - Key Entities: {', '.join(document_analysis.get('key_entities', [])[:5])}
+    - Complexity Score: {document_analysis.get('complexity_score', 0):.2f}
+    - Table Count: {document_analysis.get('table_count', 0)}
+    - Regulatory Sections: {len(document_analysis.get('regulatory_sections', []))}
     """
     
     media_context = ""
     if images:
         media_context += f"\nAvailable Images: {', '.join(list(images.keys())[:5])}\n"
-    if formulas:
-        media_context += f"\nExtracted Formulas:\n" + "\n".join(formulas[:5])
     
-    # Enhanced prompts based on section type
+    # Enhanced prompts based on section type with regulatory focus
     if section_config.get("type") == "table":
         columns = section_config.get("columns", [])
         quality_criteria = section_config.get("quality_criteria", [])
         
         user_prompt = f"""
-        You are an expert business analyst creating a high-quality "{section_name}" section for a Business Requirements Document.
+        You are an expert regulatory business analyst creating a comprehensive "{section_name}" section for a Business Requirements Document based on Basel Committee banking supervision standards.
         
-        {context_enhancement}
+        {regulatory_context}
+        {formula_summary}
         
-        Create a comprehensive table with exactly these columns: {' | '.join(columns)}
+        Create a detailed regulatory-compliant table with exactly these columns: {' | '.join(columns)}
         
         Quality Criteria to Address: {', '.join(quality_criteria)}
         
-        Based on this regulatory text: {document_text[:3000]}
+        Document Context (first 3500 chars): {document_text[:3500]}
         {media_context}
         
         Requirements:
-        1. Generate 5-8 detailed, realistic rows
-        2. Ensure each entry is specific and actionable
-        3. Use proper business terminology
-        4. Reference images using [IMAGE: image_key] format where relevant
-        5. Include risk assessments and priorities where applicable
+        1. Generate 6-10 detailed, Basel-compliant rows that reflect actual regulatory requirements
+        2. Include specific references to regulatory sections (e.g., MAR21.x) where applicable
+        3. Incorporate mathematical risk concepts and formulas where relevant
+        4. Use precise regulatory terminology and banking industry standards
+        5. Include risk weights, correlation parameters, and compliance thresholds as appropriate
+        6. Reference extracted mathematical formulas and tables where relevant
+        7. Ensure all entries are specific, actionable, and audit-ready
         
         Return in pipe-separated format:
         {' | '.join(columns)}
@@ -151,31 +185,36 @@ def generate_intelligent_brd_section(
         quality_criteria = section_config.get("quality_criteria", [])
         
         user_prompt = f"""
-        You are an expert business analyst creating a high-quality "{section_name}" section for a Business Requirements Document.
+        You are an expert regulatory business analyst creating a comprehensive "{section_name}" section for a Business Requirements Document based on Basel Committee banking supervision standards.
         
-        {context_enhancement}
+        {regulatory_context}
+        {formula_summary}
         
         Section Purpose: {description}
         
         Required Elements to Include: {', '.join(required_elements)}
         Quality Criteria to Address: {', '.join(quality_criteria)}
         
-        Based on this regulatory text: {document_text[:2500]}
+        Document Context (first 3500 chars): {document_text[:3500]}
         {media_context}
         
         Requirements:
-        1. Provide comprehensive, professional content (minimum 300 words)
-        2. Address all required elements explicitly
-        3. Use clear, business-appropriate language
-        4. Include specific examples and metrics where applicable
-        5. Reference images using [IMAGE: image_key] format where relevant
-        6. Structure with appropriate headings and bullet points
+        1. Provide comprehensive, regulatory-compliant content (minimum 400 words)
+        2. Address all required elements explicitly with regulatory precision
+        3. Use clear, banking industry-appropriate language and terminology
+        4. Include specific regulatory references and compliance requirements
+        5. Incorporate mathematical concepts and risk management principles
+        6. Reference extracted formulas and calculations where relevant
+        7. Structure with appropriate regulatory headings and detailed subsections
+        8. Include compliance checkpoints and audit requirements
+        9. Address both current requirements and implementation timelines
+        10. Provide specific metrics, thresholds, and measurement criteria
         """
     
     try:
         # Create message objects for ChatOpenAI
         system_message = SystemMessage(
-            content="You are an expert business analyst with deep knowledge of regulatory compliance, business process optimization, and stakeholder management. Create professional, detailed, and actionable BRD content."
+            content="You are a senior regulatory compliance expert and business analyst with 15+ years experience in Basel banking supervision, market risk frameworks, and regulatory implementation. You specialize in creating detailed, audit-ready Business Requirements Documents that meet the highest regulatory standards and include precise mathematical risk calculations."
         )
         human_message = HumanMessage(content=user_prompt)
         
@@ -185,7 +224,7 @@ def generate_intelligent_brd_section(
         return response.content
     except Exception as e:
         logger.error(f"Error generating {section_name}: {str(e)}")
-        return generate_placeholder_content(section_name, section_config)
+        return generate_enhanced_placeholder_content(section_name, section_config, formulas, document_analysis)
 
 def generate_placeholder_content(section_name: str, section_config: Dict[str, Any]) -> str:
     """Generate placeholder content when AI is not available"""
@@ -199,6 +238,63 @@ def generate_placeholder_content(section_name: str, section_config: Dict[str, An
         return "\n".join(placeholder_rows)
     else:
         return f"Placeholder content for {section_name}. AI processing is not available. Please configure your AI model properly."
+
+def generate_enhanced_placeholder_content(section_name: str, section_config: Dict[str, Any], formulas: List[Any], document_analysis: Dict[str, Any]) -> str:
+    """Generate enhanced placeholder content with regulatory and mathematical context"""
+    
+    if section_config.get("type") == "table":
+        columns = section_config.get("columns", ["Column1", "Column2"])
+        # Create enhanced placeholder table content
+        placeholder_rows = []
+        
+        # Add regulatory-specific sample data
+        if "Risk" in section_name or "Assessment" in section_name:
+            for i in range(5):
+                row = [f"REG-RISK-{i+1:03d}"] + [f"Basel III Compliance Item {i+1}" if j == 1 else f"Value {i+1}" for j, _ in enumerate(columns[1:])]
+                placeholder_rows.append(" | ".join(row))
+        elif "Requirements" in section_name:
+            for i in range(5):
+                row = [f"REQ-{i+1:03d}"] + [f"Regulatory Requirement {i+1}" if j == 1 else f"Specification {i+1}" for j, _ in enumerate(columns[1:])]
+                placeholder_rows.append(" | ".join(row))
+        else:
+            for i in range(3):
+                row = [f"ITEM-{i+1:03d}"] + [f"Regulatory Item {i+1}" for _ in columns[1:]]
+                placeholder_rows.append(" | ".join(row))
+        
+        return "\n".join(placeholder_rows)
+    else:
+        # Enhanced text placeholder with regulatory context
+        complexity = document_analysis.get('mathematical_complexity', 'Unknown')
+        frameworks = ', '.join(document_analysis.get('regulatory_framework', ['Basel III']))
+        
+        # Handle both old and new formula formats
+        formula_count = 0
+        if formulas:
+            formula_count = len(formulas)
+        
+        return f"""PLACEHOLDER CONTENT FOR {section_name}
+        
+        This section addresses regulatory requirements under {frameworks} framework with {complexity.lower()} mathematical complexity.
+        
+        KEY REGULATORY CONSIDERATIONS:
+        - Compliance Framework: {frameworks}
+        - Mathematical Elements: {formula_count} formulas and calculations identified
+        - Document Type: {document_analysis.get('document_type', 'Regulatory')}
+        - Complexity Score: {document_analysis.get('complexity_score', 0):.2f}
+        
+        IMPLEMENTATION REQUIREMENTS:
+        - Regulatory approval processes must be established
+        - Mathematical models require validation and testing
+        - Compliance monitoring and reporting systems needed
+        - Risk management controls and governance frameworks
+        
+        MATHEMATICAL COMPONENTS:
+        {"- Advanced risk calculations and correlation models required" if formula_count > 10 else "- Standard regulatory calculations apply"}
+        {"- Complex mathematical validation processes needed" if complexity == "Very High" else "- Standard validation procedures sufficient"}
+        
+        AI processing is currently unavailable. Please configure your AI model properly or manually complete this section with appropriate regulatory content addressing the specific requirements of {section_name}.
+        
+        This placeholder incorporates analysis of {formula_count} mathematical formulas and regulatory structures from the source document to ensure comprehensive coverage of all regulatory requirements."""
 
 def calculate_quality_score(section_name: str, content: Any, structure_config: Dict[str, Any]) -> Tuple[float, List[QualityCheck]]:
     """Calculate quality score and generate quality checks"""
@@ -265,7 +361,7 @@ def calculate_quality_score(section_name: str, content: Any, structure_config: D
         checks.append(QualityCheck(section_name, "error", "FAIL", f"Error in quality calculation: {str(e)}", "error"))
         return 0.0, checks
 
-def generate_enhanced_brd(document_text: str, extracted_images: Dict[str, str], extracted_formulas: List[str], document_analysis: Dict[str, Any]) -> Dict[str, Any]:
+def generate_enhanced_brd(document_text: str, extracted_images: Dict[str, str], extracted_formulas: List[Any], document_analysis: Dict[str, Any]) -> Dict[str, Any]:
     """Generate complete enhanced BRD with quality scoring"""
     logger.info("Starting enhanced BRD generation")
     
