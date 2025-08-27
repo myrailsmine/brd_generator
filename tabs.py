@@ -3,6 +3,7 @@ Main Tab UI Components
 """
 
 import streamlit as st
+import pandas as pd
 from datetime import datetime
 from typing import Dict, Any
 
