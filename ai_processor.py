@@ -230,7 +230,7 @@ def generate_intelligent_brd_section_enhanced(
         You are an expert regulatory business analyst creating a comprehensive "{section_name}" section for a Business Requirements Document.
         
         {regulatory_context}
-        {visual_content}
+        {visual_context}
         
         Create a detailed regulatory-compliant table with exactly these columns: {' | '.join(columns)}
         
@@ -267,7 +267,7 @@ def generate_intelligent_brd_section_enhanced(
         You are an expert regulatory business analyst creating a comprehensive "{section_name}" section for a Business Requirements Document.
         
         {regulatory_context}
-        {visual_content}
+        {visual_context}
         
         Section Purpose: {description}
         
