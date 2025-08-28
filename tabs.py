@@ -4,6 +4,7 @@ Updated Main Tab UI Components with Enhanced Image and Formula Processing
 
 import streamlit as st
 import pandas as pd
+import re
 from datetime import datetime
 from typing import Dict, Any
 
