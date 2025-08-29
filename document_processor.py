@@ -1296,3 +1296,431 @@ def generate_sample_regulatory_data(columns: List[str]) -> List[List[str]]:
         sample_rows.append(row)
     
     return sample_rows
+
+def assess_table_regulatory_relevance(table_text: str, table_metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Assess the regulatory relevance of a table based on content analysis
+    
+    Args:
+        table_text: The raw text content of the table
+        table_metadata: Additional metadata about the table (optional)
+    
+    Returns:
+        Dict containing regulatory relevance assessment
+    """
+    assessment = {
+        'relevance_score': 0.0,
+        'relevance_level': 'Low',
+        'regulatory_frameworks': [],
+        'key_indicators': [],
+        'compliance_areas': [],
+        'risk_categories': [],
+        'regulatory_confidence': 0.0,
+        'recommendations': []
+    }
+    
+    if not table_text:
+        return assessment
+    
+    text_lower = table_text.lower()
+    relevance_score = 0.0
+    
+    # Basel Committee regulatory frameworks
+    basel_indicators = [
+        ('basel iii', 0.4, 'Basel III Framework'),
+        ('basel iv', 0.4, 'Basel IV Framework'), 
+        ('basel committee', 0.3, 'Basel Committee Standards'),
+        ('mar21', 0.5, 'Basel MAR21 Market Risk'),
+        ('mar22', 0.5, 'Basel MAR22 Market Risk'),
+        ('mar23', 0.5, 'Basel MAR23 Market Risk'),
+        ('cva', 0.3, 'Credit Valuation Adjustment'),
+        ('sa-ccr', 0.4, 'Standardised Approach CCR')
+    ]
+    
+    # European regulatory frameworks
+    eu_indicators = [
+        ('crd', 0.3, 'Capital Requirements Directive'),
+        ('crr', 0.3, 'Capital Requirements Regulation'),
+        ('mifid', 0.3, 'Markets in Financial Instruments Directive'),
+        ('solvency', 0.3, 'Solvency Regulations'),
+        ('eba', 0.2, 'European Banking Authority'),
+        ('esma', 0.2, 'European Securities and Markets Authority')
+    ]
+    
+    # US regulatory frameworks
+    us_indicators = [
+        ('dodd-frank', 0.3, 'Dodd-Frank Act'),
+        ('sox', 0.2, 'Sarbanes-Oxley Act'),
+        ('ccar', 0.3, 'Comprehensive Capital Analysis Review'),
+        ('dfast', 0.3, 'Dodd-Frank Stress Testing'),
+        ('fed', 0.2, 'Federal Reserve Requirements'),
+        ('occ', 0.2, 'Office of Comptroller of Currency'),
+        ('fdic', 0.2, 'Federal Deposit Insurance Corporation')
+    ]
+    
+    # General compliance indicators
+    compliance_indicators = [
+        ('compliance', 0.2, 'General Compliance'),
+        ('regulatory', 0.2, 'Regulatory Requirements'),
+        ('governance', 0.15, 'Governance Framework'),
+        ('audit', 0.15, 'Audit Requirements'),
+        ('reporting', 0.1, 'Regulatory Reporting'),
+        ('disclosure', 0.1, 'Disclosure Requirements')
+    ]
+    
+    # Risk management indicators
+    risk_indicators = [
+        ('market risk', 0.3, 'Market Risk Management'),
+        ('credit risk', 0.3, 'Credit Risk Management'), 
+        ('operational risk', 0.3, 'Operational Risk Management'),
+        ('liquidity risk', 0.3, 'Liquidity Risk Management'),
+        ('interest rate risk', 0.25, 'Interest Rate Risk'),
+        ('foreign exchange risk', 0.25, 'FX Risk Management'),
+        ('counterparty risk', 0.25, 'Counterparty Risk'),
+        ('concentration risk', 0.2, 'Concentration Risk'),
+        ('systemic risk', 0.2, 'Systemic Risk')
+    ]
+    
+    # Mathematical/technical indicators
+    technical_indicators = [
+        ('risk weight', 0.4, 'Risk Weighting'),
+        ('capital requirement', 0.4, 'Capital Requirements'),
+        ('correlation', 0.3, 'Correlation Analysis'),
+        ('sensitivity', 0.3, 'Risk Sensitivity'),
+        ('delta', 0.25, 'Delta Risk'),
+        ('vega', 0.25, 'Vega Risk'),
+        ('curvature', 0.3, 'Curvature Risk'),
+        ('stress test', 0.3, 'Stress Testing'),
+        ('scenario analysis', 0.25, 'Scenario Analysis'),
+        ('backtesting', 0.25, 'Model Backtesting'),
+        ('validation', 0.2, 'Model Validation')
+    ]
+    
+    all_indicators = basel_indicators + eu_indicators + us_indicators + compliance_indicators + risk_indicators + technical_indicators
+    
+    detected_frameworks = []
+    key_indicators = []
+    
+    # Check each indicator
+    for indicator, score_weight, description in all_indicators:
+        if indicator in text_lower:
+            relevance_score += score_weight
+            detected_frameworks.append(description)
+            key_indicators.append(indicator)
+            
+            # Boost score for multiple occurrences
+            occurrences = text_lower.count(indicator)
+            if occurrences > 1:
+                relevance_score += min(0.1 * (occurrences - 1), 0.3)
+    
+    # Additional scoring based on table structure
+    if table_metadata:
+        # Score based on table size (larger tables often more complex/regulatory)
+        row_count = table_metadata.get('row_count', 0)
+        if row_count > 20:
+            relevance_score += 0.1
+        elif row_count > 50:
+            relevance_score += 0.2
+        
+        column_count = table_metadata.get('column_count', 0)
+        if column_count > 6:
+            relevance_score += 0.1
+        elif column_count > 10:
+            relevance_score += 0.2
+    
+    # Check for regulatory table patterns
+    regulatory_patterns = [
+        (r'bucket\s+\d+', 0.3, 'Basel Bucket Classification'),
+        (r'risk\s+weight\s*[:=]\s*\d+%', 0.4, 'Risk Weight Assignment'),
+        (r'correlation\s*[:=]\s*0\.\d+', 0.3, 'Correlation Parameters'),
+        (r'capital\s+requirement\s*[:=]', 0.4, 'Capital Requirement Calculation'),
+        (r'supervisory\s+delta', 0.3, 'Supervisory Delta'),
+        (r'curvature\s+risk', 0.35, 'Curvature Risk Measure'),
+        (r'default\s+risk\s+charge', 0.3, 'Default Risk Charge'),
+        (r'residual\s+risk\s+add-on', 0.3, 'Residual Risk Add-on'),
+        (r'pv01|cs01|cr01', 0.25, 'Risk Sensitivity Measures')
+    ]
+    
+    pattern_matches = []
+    for pattern, score_add, description in regulatory_patterns:
+        matches = re.findall(pattern, text_lower)
+        if matches:
+            relevance_score += score_add
+            pattern_matches.append(description)
+    
+    # Determine relevance level
+    if relevance_score >= 1.5:
+        relevance_level = 'Very High'
+        regulatory_confidence = 0.9
+    elif relevance_score >= 1.0:
+        relevance_level = 'High' 
+        regulatory_confidence = 0.8
+    elif relevance_score >= 0.6:
+        relevance_level = 'Medium'
+        regulatory_confidence = 0.6
+    elif relevance_score >= 0.3:
+        relevance_level = 'Low'
+        regulatory_confidence = 0.4
+    else:
+        relevance_level = 'Very Low'
+        regulatory_confidence = 0.2
+    
+    # Categorize compliance areas
+    compliance_areas = []
+    if any('market' in fw.lower() for fw in detected_frameworks):
+        compliance_areas.append('Market Risk Compliance')
+    if any('credit' in fw.lower() for fw in detected_frameworks):
+        compliance_areas.append('Credit Risk Compliance')
+    if any('operational' in fw.lower() for fw in detected_frameworks):
+        compliance_areas.append('Operational Risk Compliance')
+    if any('capital' in fw.lower() for fw in detected_frameworks):
+        compliance_areas.append('Capital Adequacy')
+    if any('liquidity' in fw.lower() for fw in detected_frameworks):
+        compliance_areas.append('Liquidity Management')
+    
+    # Generate recommendations
+    recommendations = []
+    if relevance_score >= 1.0:
+        recommendations.extend([
+            "Implement specialized regulatory validation",
+            "Require expert regulatory review",
+            "Establish audit trail for regulatory compliance",
+            "Consider automated regulatory reporting integration"
+        ])
+    elif relevance_score >= 0.6:
+        recommendations.extend([
+            "Review with compliance team",
+            "Implement standard regulatory checks",
+            "Document regulatory mapping"
+        ])
+    else:
+        recommendations.append("Standard business validation sufficient")
+    
+    # Risk categorization
+    risk_categories = []
+    risk_terms = {
+        'market': 'Market Risk',
+        'credit': 'Credit Risk', 
+        'operational': 'Operational Risk',
+        'liquidity': 'Liquidity Risk',
+        'interest rate': 'Interest Rate Risk',
+        'foreign exchange': 'FX Risk',
+        'counterparty': 'Counterparty Risk'
+    }
+    
+    for risk_term, risk_category in risk_terms.items():
+        if risk_term in text_lower:
+            risk_categories.append(risk_category)
+    
+    assessment.update({
+        'relevance_score': min(relevance_score, 3.0),  # Cap at 3.0
+        'relevance_level': relevance_level,
+        'regulatory_frameworks': list(set(detected_frameworks)),
+        'key_indicators': list(set(key_indicators)),
+        'compliance_areas': list(set(compliance_areas)),
+        'risk_categories': list(set(risk_categories)),
+        'regulatory_confidence': regulatory_confidence,
+        'recommendations': recommendations,
+        'pattern_matches': pattern_matches
+    })
+    
+    logger.info(f"Table regulatory relevance assessed: {relevance_level} ({relevance_score:.2f})")
+    return assessment
+
+def calculate_table_confidence(table_data: str, columns: List[str], regulatory_assessment: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Calculate confidence score for table extraction and processing
+    
+    Args:
+        table_data: Raw table data text
+        columns: Extracted column headers
+        regulatory_assessment: Optional regulatory relevance assessment
+    
+    Returns:
+        Dict containing confidence metrics
+    """
+    confidence_metrics = {
+        'overall_confidence': 0.0,
+        'confidence_level': 'Low',
+        'extraction_confidence': 0.0,
+        'structure_confidence': 0.0,
+        'content_confidence': 0.0,
+        'regulatory_confidence': 0.0,
+        'quality_indicators': [],
+        'risk_factors': [],
+        'improvement_suggestions': []
+    }
+    
+    if not table_data or not columns:
+        confidence_metrics['improvement_suggestions'].append("Insufficient data for confidence calculation")
+        return confidence_metrics
+    
+    # 1. EXTRACTION CONFIDENCE (40% weight)
+    extraction_score = 0.0
+    
+    # Check table structure clarity
+    lines = [line for line in table_data.split('\n') if line.strip()]
+    data_lines = [line for line in lines if '|' in line]
+    
+    if data_lines:
+        extraction_score += 0.4  # Basic table structure detected
+        
+        # Check for consistent column structure
+        pipe_counts = [line.count('|') for line in data_lines]
+        if pipe_counts and max(pipe_counts) - min(pipe_counts) <= 1:
+            extraction_score += 0.3
+            confidence_metrics['quality_indicators'].append("Consistent table structure")
+        else:
+            confidence_metrics['risk_factors'].append("Inconsistent column structure detected")
+        
+        # Check data density
+        non_empty_cells = sum(1 for line in data_lines for cell in line.split('|') if cell.strip())
+        total_cells = sum(len(line.split('|')) for line in data_lines)
+        if total_cells > 0:
+            density_ratio = non_empty_cells / total_cells
+            if density_ratio > 0.8:
+                extraction_score += 0.2
+                confidence_metrics['quality_indicators'].append(f"High data density ({density_ratio:.1%})")
+            elif density_ratio > 0.6:
+                extraction_score += 0.1
+            else:
+                confidence_metrics['risk_factors'].append(f"Low data density ({density_ratio:.1%})")
+    
+    # 2. STRUCTURE CONFIDENCE (25% weight)
+    structure_score = 0.0
+    
+    # Column quality assessment
+    if columns:
+        # Check for meaningful column names
+        meaningful_columns = 0
+        regulatory_columns = 0
+        
+        regulatory_keywords = ['risk', 'capital', 'requirement', 'weight', 'correlation', 
+                             'sensitivity', 'exposure', 'rating', 'grade', 'bucket']
+        
+        for col in columns:
+            if len(col.strip()) > 2 and not col.strip().isdigit():
+                meaningful_columns += 1
+            
+            if any(keyword in col.lower() for keyword in regulatory_keywords):
+                regulatory_columns += 1
+        
+        if meaningful_columns == len(columns):
+            structure_score += 0.4
+            confidence_metrics['quality_indicators'].append("All columns have meaningful names")
+        elif meaningful_columns >= len(columns) * 0.8:
+            structure_score += 0.3
+        
+        if regulatory_columns > 0:
+            structure_score += min(0.3, regulatory_columns * 0.1)
+            confidence_metrics['quality_indicators'].append(f"Contains {regulatory_columns} regulatory columns")
+        
+        # Optimal column count for readability
+        if 3 <= len(columns) <= 8:
+            structure_score += 0.2
+        elif len(columns) > 10:
+            confidence_metrics['risk_factors'].append("Too many columns may affect readability")
+    
+    # 3. CONTENT CONFIDENCE (20% weight)
+    content_score = 0.0
+    
+    # Check for specific data patterns
+    content_patterns = [
+        (r'\d+\.?\d*%', 0.1, 'Contains percentage values'),
+        (r'\$\d+(?:,\d{3})*(?:\.\d{2})?', 0.1, 'Contains monetary values'),
+        (r'\d{4}-\d{2}-\d{2}', 0.05, 'Contains date values'),
+        (r'[A-Z]{2,}-\d+', 0.05, 'Contains reference codes'),
+        (r'0\.\d{2,}', 0.1, 'Contains decimal values'),
+        (r'\d+\.\d+e[+-]?\d+', 0.05, 'Contains scientific notation')
+    ]
+    
+    for pattern, score_add, description in content_patterns:
+        if re.search(pattern, table_data):
+            content_score += score_add
+            confidence_metrics['quality_indicators'].append(description)
+    
+    # Check for data completeness
+    empty_cell_pattern = r'\|\s*\|'
+    empty_cells = len(re.findall(empty_cell_pattern, table_data))
+    total_separators = table_data.count('|')
+    
+    if total_separators > 0:
+        completeness_ratio = 1 - (empty_cells / total_separators)
+        if completeness_ratio > 0.9:
+            content_score += 0.3
+            confidence_metrics['quality_indicators'].append(f"High completeness ({completeness_ratio:.1%})")
+        elif completeness_ratio > 0.7:
+            content_score += 0.2
+        else:
+            confidence_metrics['risk_factors'].append(f"Low completeness ({completeness_ratio:.1%})")
+    
+    # 4. REGULATORY CONFIDENCE (15% weight)
+    regulatory_score = 0.0
+    
+    if regulatory_assessment:
+        reg_confidence = regulatory_assessment.get('regulatory_confidence', 0.0)
+        regulatory_score = reg_confidence
+        
+        if reg_confidence > 0.8:
+            confidence_metrics['quality_indicators'].append("High regulatory relevance detected")
+        elif reg_confidence > 0.6:
+            confidence_metrics['quality_indicators'].append("Medium regulatory relevance detected")
+        
+        # Add regulatory framework info
+        frameworks = regulatory_assessment.get('regulatory_frameworks', [])
+        if frameworks:
+            confidence_metrics['quality_indicators'].append(f"Regulatory frameworks: {', '.join(frameworks[:3])}")
+    
+    # Calculate weighted overall confidence
+    overall_confidence = (
+        extraction_score * 0.4 +
+        structure_score * 0.25 + 
+        content_score * 0.2 +
+        regulatory_score * 0.15
+    )
+    
+    # Determine confidence level
+    if overall_confidence >= 0.85:
+        confidence_level = 'Very High'
+    elif overall_confidence >= 0.7:
+        confidence_level = 'High'
+    elif overall_confidence >= 0.5:
+        confidence_level = 'Medium'
+    elif overall_confidence >= 0.3:
+        confidence_level = 'Low'
+    else:
+        confidence_level = 'Very Low'
+    
+    # Generate improvement suggestions
+    improvement_suggestions = []
+    
+    if extraction_score < 0.6:
+        improvement_suggestions.append("Improve table structure extraction")
+    if structure_score < 0.5:
+        improvement_suggestions.append("Enhance column header detection")
+    if content_score < 0.4:
+        improvement_suggestions.append("Improve data pattern recognition")
+    if regulatory_score < 0.5 and regulatory_assessment:
+        improvement_suggestions.append("Enhance regulatory context analysis")
+    
+    if overall_confidence < 0.5:
+        improvement_suggestions.extend([
+            "Consider manual review and validation",
+            "Implement additional quality checks",
+            "Verify source document quality"
+        ])
+    
+    confidence_metrics.update({
+        'overall_confidence': overall_confidence,
+        'confidence_level': confidence_level,
+        'extraction_confidence': extraction_score,
+        'structure_confidence': structure_score,
+        'content_confidence': content_score,
+        'regulatory_confidence': regulatory_score,
+        'improvement_suggestions': improvement_suggestions,
+        'row_count': len(data_lines),
+        'column_count': len(columns)
+    })
+    
+    logger.info(f"Table confidence calculated: {confidence_level} ({overall_confidence:.2f})")
+    return confidence_metrics
