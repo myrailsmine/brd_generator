@@ -1,10 +1,9 @@
 """
-Enhanced Tab UI Components with Sophisticated Basel Document Processing
+Main Tab UI Components
 """
 
 import streamlit as st
 import pandas as pd
-import re
 from datetime import datetime
 from typing import Dict, Any
 
@@ -18,14 +17,14 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 def render_main_tabs(uploaded_file, extraction_options: Dict[str, Any]):
-    """Render main application tabs with enhanced processing"""
-    tab1, tab2, tab3, tab4 = st.tabs(["Document Analysis", "BRD Generation", "Analytics", "Collaboration"])
+    """Render main application tabs"""
+    tab1, tab2, tab3, tab4 = st.tabs(["📄 Document Analysis", "🚀 BRD Generation", "📊 Analytics", "👥 Collaboration"])
     
     with tab1:
-        render_sophisticated_document_analysis_tab(uploaded_file, extraction_options)
+        render_document_analysis_tab(uploaded_file, extraction_options)
     
     with tab2:
-        render_sophisticated_brd_generation_tab(uploaded_file)
+        render_brd_generation_tab(uploaded_file)
     
     with tab3:
         render_analytics_tab()
@@ -33,15 +32,15 @@ def render_main_tabs(uploaded_file, extraction_options: Dict[str, Any]):
     with tab4:
         render_collaboration_hub()
 
-def render_sophisticated_document_analysis_tab(uploaded_file, extraction_options: Dict[str, Any]):
-    """Enhanced document analysis with sophisticated Basel-specific processing"""
+def render_document_analysis_tab(uploaded_file, extraction_options: Dict[str, Any]):
+    """Render document analysis tab"""
     if uploaded_file is not None:
         # Document processing and analysis
         file_size_mb = uploaded_file.size / (1024 * 1024)
         st.success(f"**{uploaded_file.name}** uploaded successfully ({file_size_mb:.2f} MB)")
         
-        # Sophisticated document extraction
-        with st.spinner("Performing sophisticated AI analysis with Basel-specific intelligence..."):
+        # Enhanced document extraction
+        with st.spinner("Performing advanced AI analysis..."):
             try:
                 document_text, extracted_images, extracted_formulas, document_analysis = process_document(
                     uploaded_file, 
@@ -60,8 +59,8 @@ def render_sophisticated_document_analysis_tab(uploaded_file, extraction_options
                 st.error(f"Error processing document: {str(e)}")
                 return
         
-        # Enhanced metrics display with sophisticated analysis
-        col1, col2, col3, col4, col5 = st.columns(5)
+        # Enhanced metrics display
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Content", f"{len(document_text):,} chars")
         with col2:
@@ -70,281 +69,184 @@ def render_sophisticated_document_analysis_tab(uploaded_file, extraction_options
             st.metric("Formulas", len(extracted_formulas))
         with col4:
             complexity = document_analysis.get('complexity_score', 0)
-            st.metric("Complexity", f"{complexity:.2f}")
-        with col5:
-            math_complexity = document_analysis.get('mathematical_complexity', 'Low')
-            st.metric("Math Level", math_complexity)
+            st.metric("Complexity", f"{complexity:.1f}")
         
-        # Sophisticated document intelligence insights
+        # Document intelligence insights
         if document_analysis:
-            st.subheader("Sophisticated AI Document Analysis")
+            st.subheader("AI Document Analysis")
             
             col1, col2 = st.columns(2)
             with col1:
-                st.info(f"**Document Classification:** {document_analysis.get('document_type', 'Unknown')}")
-                
-                frameworks = document_analysis.get('regulatory_framework', [])
-                if frameworks:
-                    framework_text = ', '.join(frameworks)
-                    st.info(f"**Regulatory Frameworks:** {framework_text}")
+                st.info(f"**Document Type:** {document_analysis.get('document_type', 'Unknown')}")
+                if document_analysis.get('regulatory_framework'):
+                    frameworks = ', '.join(document_analysis['regulatory_framework'])
+                    st.info(f"**Regulatory Frameworks:** {frameworks}")
                 
                 math_complexity = document_analysis.get('mathematical_complexity', 'Unknown')
-                st.info(f"**Mathematical Sophistication:** {math_complexity}")
-                
-                if 'mathematical_formulas' in document_analysis:
-                    formula_data = document_analysis['mathematical_formulas']
-                    st.success(f"**Formula Analysis:** {formula_data.get('total_count', 0)} mathematical elements")
+                st.info(f"**Mathematical Complexity:** {math_complexity}")
             
             with col2:
-                key_entities = document_analysis.get('key_entities', {})
-                if isinstance(key_entities, dict) and 'by_type' in key_entities:
-                    total_entities = sum(len(entities) for entities in key_entities['by_type'].values())
-                    st.success(f"**Regulatory Entities:** {total_entities} identified")
-                elif isinstance(key_entities, list):
-                    st.success(f"**Key Entities:** {len(key_entities)} found")
-                
-                regulatory_sections = document_analysis.get('regulatory_sections', [])
-                if regulatory_sections:
-                    st.success(f"**Regulatory Sections:** {len(regulatory_sections)} identified")
+                if document_analysis.get('key_entities'):
+                    st.success(f"**Key Entities Found:** {len(document_analysis['key_entities'])}")
+                if document_analysis.get('regulatory_sections'):
+                    st.success(f"**Regulatory Sections:** {len(document_analysis['regulatory_sections'])}")
                 
                 table_count = document_analysis.get('table_count', 0)
                 st.success(f"**Tables Detected:** {table_count}")
             
-            # Sophisticated mathematical content analysis
-            if 'mathematical_formulas' in document_analysis and document_analysis['mathematical_formulas'].get('total_count', 0) > 0:
-                st.subheader("Advanced Mathematical Content Analysis")
+            # Enhanced regulatory insights
+            if document_analysis.get('formula_types'):
+                st.subheader("Mathematical Content Analysis")
+                formula_types = document_analysis['formula_types']
                 
-                formula_data = document_analysis['mathematical_formulas']
-                
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Total Formulas", formula_data.get('total_count', 0))
+                    st.metric("Formula Types", len(formula_types))
                 with col2:
-                    by_type = formula_data.get('by_type', {})
-                    st.metric("Formula Types", len(by_type))
+                    complexity_score = document_analysis.get('complexity_score', 0)
+                    st.metric("Complexity Score", f"{complexity_score:.2f}")
                 with col3:
-                    key_formulas = len(formula_data.get('key_formulas', []))
-                    st.metric("Key Formulas", key_formulas)
-                with col4:
-                    complexity_dist = formula_data.get('complexity_distribution', {})
-                    high_complex = complexity_dist.get('High', 0) + complexity_dist.get('Very High', 0)
-                    st.metric("Complex Formulas", high_complex)
+                    total_formulas = len(extracted_formulas)
+                    st.metric("Total Elements", total_formulas)
                 
-                # Sophisticated formula type breakdown
-                if by_type:
-                    st.write("**Mathematical Formula Categories:**")
-                    for ftype, count in sorted(by_type.items(), key=lambda x: x[1], reverse=True)[:10]:
-                        type_display = ftype.replace('_', ' ').title()
-                        st.write(f"• **{type_display}**: {count} instances")
-                
-                # Key formulas preview
-                key_formulas = formula_data.get('key_formulas', [])
-                if key_formulas:
-                    with st.expander("Key Mathematical Formulas Preview"):
-                        for i, formula in enumerate(key_formulas[:5]):
-                            st.write(f"**{i+1}. {formula.get('type', '').replace('_', ' ').title()}**")
-                            st.code(formula.get('text', '')[:150], language='text')
-                            st.caption(f"Confidence: {formula.get('confidence', 0):.1%} | Page: {formula.get('page', 'Unknown')}")
-                            st.markdown("---")
+                # Formula type breakdown
+                if formula_types:
+                    st.write("**Formula Types Detected:**")
+                    for ftype in formula_types[:10]:  # Show top 10 types
+                        type_name = ftype.replace('_', ' ').title()
+                        count = len([f for f in extracted_formulas if isinstance(f, dict) and f.get('type') == ftype])
+                        st.write(f"• {type_name}: {count} instances")
             
-            # Enhanced regulatory sections preview
-            if regulatory_sections:
-                with st.expander("Regulatory Structure Analysis"):
-                    st.write("**Major Regulatory Sections Identified:**")
-                    for i, section in enumerate(regulatory_sections[:15]):
-                        section_text = section[:120] + "..." if len(str(section)) > 120 else str(section)
-                        st.write(f"{i+1}. {section_text}")
+            # Regulatory sections preview
+            if document_analysis.get('regulatory_sections'):
+                with st.expander("Regulatory Sections Detected"):
+                    for section in document_analysis['regulatory_sections'][:15]:
+                        st.write(f"• {section[:100]}...")
             
-            # Sophisticated content preview with mathematical context
-            with st.expander("Document Content Preview with Mathematical Context"):
-                preview_text = document_text[:3000] + "..." if len(document_text) > 3000 else document_text
-                
-                # Highlight mathematical content in preview
-                highlighted_text = preview_text
-                for formula in extracted_formulas[:10]:  # Highlight top 10 formulas
-                    if isinstance(formula, dict):
-                        formula_text = formula.get('text', '')
-                        if len(formula_text) > 3 and formula_text in highlighted_text:
-                            highlighted_text = highlighted_text.replace(formula_text, f"**{formula_text}**")
-                
-                st.text_area("Enhanced Document Preview", highlighted_text, height=250, disabled=True)
+            # Preview extracted content
+            with st.expander("Content Preview", expanded=False):
+                preview_text = document_text[:2000] + "..." if len(document_text) > 2000 else document_text
+                st.text_area("Document Content", preview_text, height=200, disabled=True)
             
-            # Sophisticated media gallery with classification
+            # Media preview with enhanced display
             if extracted_images or extracted_formulas:
-                with st.expander("Advanced Content Gallery"):
+                with st.expander("Extracted Media Gallery", expanded=False):
                     if extracted_images:
-                        st.subheader("Extracted Visual Content")
-                        
-                        # Classify images by type
-                        math_images = [k for k in extracted_images.keys() if 'math' in k.lower() or 'formula' in k.lower()]
-                        table_images = [k for k in extracted_images.keys() if 'table' in k.lower()]
-                        table_images = [k for k in extracted_images.keys() if 'table' in k.lower()]
-                        other_images = [k for k in extracted_images.keys() if k not in math_images and k not in table_images]
-                        
-                        if math_images:
-                            st.write("**Mathematical Formulas & Expressions:**")
-                            cols = st.columns(min(len(math_images), 4))
-                            for idx, img_key in enumerate(math_images[:4]):
-                                with cols[idx % 4]:
-                                    display_image_from_base64(extracted_images[img_key], caption=f"Formula: {img_key}", max_width=200)
-                        
-                        if table_images:
-                            st.write("**Regulatory Tables:**")
-                            cols = st.columns(min(len(table_images), 3))
-                            for idx, img_key in enumerate(table_images[:3]):
-                                with cols[idx % 3]:
-                                    display_image_from_base64(extracted_images[img_key], caption=f"Table: {img_key}", max_width=250)
-                        
-                        if other_images:
-                            st.write("**Other Visual Content:**")
-                            cols = st.columns(min(len(other_images), 4))
-                            for idx, img_key in enumerate(other_images[:4]):
-                                with cols[idx % 4]:
-                                    display_image_from_base64(extracted_images[img_key], caption=img_key, max_width=150)
+                        st.subheader("Images")
+                        cols = st.columns(4)
+                        for idx, (img_key, img_b64) in enumerate(extracted_images.items()):
+                            with cols[idx % 4]:
+                                display_image_from_base64(img_b64, caption=img_key, max_width=150)
                     
                     if extracted_formulas:
-                        st.subheader("Mathematical & Regulatory Elements")
+                        st.subheader("Mathematical Formulas and Regulatory Elements")
                         
-                        # Advanced formula categorization
-                        formula_categories = {}
-                        for formula in extracted_formulas:
+                        # Group formulas by type for better organization
+                        formula_groups = {}
+                        for formula in extracted_formulas[:20]:  # Show top 20
                             if isinstance(formula, dict):
-                                category = formula.get('type', 'unknown')
-                                if category not in formula_categories:
-                                    formula_categories[category] = []
-                                formula_categories[category].append(formula)
+                                formula_type = formula.get('type', 'unknown')
+                                confidence = formula.get('confidence', 0)
+                                
+                                if formula_type not in formula_groups:
+                                    formula_groups[formula_type] = []
+                                formula_groups[formula_type].append(formula)
                         
-                        # Display by category with sophistication
-                        for category, formulas_list in sorted(formula_categories.items(), key=lambda x: len(x[1]), reverse=True):
-                            category_name = category.replace('_', ' ').title()
-                            
-                            with st.expander(f"{category_name} ({len(formulas_list)} elements)"):
-                                for i, formula in enumerate(formulas_list[:8]):  # Top 8 per category
-                                    col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-                                    
+                        # Display grouped formulas
+                        for formula_type, formulas_list in formula_groups.items():
+                            type_name = formula_type.replace('_', ' ').title()
+                            with st.expander(f"{type_name} ({len(formulas_list)} items)"):
+                                for i, formula in enumerate(formulas_list):
+                                    col1, col2, col3 = st.columns([3, 1, 1])
                                     with col1:
-                                        formula_text = formula.get('text', '')
-                                        st.code(formula_text[:120] + "..." if len(formula_text) > 120 else formula_text, language="text")
-                                    
+                                        st.code(formula.get('text', ''), language="text")
                                     with col2:
                                         confidence = formula.get('confidence', 0)
-                                        st.metric("Confidence", f"{confidence:.0%}")
-                                    
+                                        st.metric("Confidence", f"{confidence:.1%}")
                                     with col3:
-                                        complexity = formula.get('mathematical_complexity', 'Unknown')
-                                        st.write(f"**{complexity}**")
+                                        if formula.get('page'):
+                                            st.write(f"Page {formula['page']}")
                                     
-                                    with col4:
-                                        page = formula.get('page', 'N/A')
-                                        st.write(f"Page {page}")
-                                    
-                                    # Enhanced context display
+                                    # Show context if available
                                     if formula.get('context'):
-                                        context = formula['context'][:200] + "..." if len(formula.get('context', '')) > 200 else formula.get('context', '')
-                                        st.caption(f"Context: {context}")
-                                    
-                                    # Regulatory relevance indicator
-                                    relevance = formula.get('regulatory_relevance', 0)
-                                    if relevance > 0.8:
-                                        st.success("High regulatory relevance")
-                                    elif relevance > 0.6:
-                                        st.warning("Medium regulatory relevance")
-                                    
+                                        st.caption(f"Context: {formula['context'][:100]}...")
                                     st.markdown("---")
                         
-                        # Mathematical complexity summary
-                        st.subheader("Mathematical Complexity Analysis")
-                        complexity_counts = {}
-                        for formula in extracted_formulas:
-                            if isinstance(formula, dict):
-                                complexity = formula.get('mathematical_complexity', 'Unknown')
-                                complexity_counts[complexity] = complexity_counts.get(complexity, 0) + 1
-                        
+                        # Summary statistics
+                        st.subheader("Formula Analysis Summary")
                         col1, col2, col3, col4 = st.columns(4)
                         with col1:
-                            st.metric("Very High", complexity_counts.get('Very High', 0))
+                            total_formulas = len(extracted_formulas)
+                            st.metric("Total Elements", total_formulas)
                         with col2:
-                            st.metric("High", complexity_counts.get('High', 0))
+                            high_conf = len([f for f in extracted_formulas if isinstance(f, dict) and f.get('confidence', 0) > 0.7])
+                            st.metric("High Confidence", high_conf)
                         with col3:
-                            st.metric("Medium", complexity_counts.get('Medium', 0))
+                            formula_types = len(set(f.get('type', 'unknown') for f in extracted_formulas if isinstance(f, dict)))
+                            st.metric("Formula Types", formula_types)
                         with col4:
-                            st.metric("Low", complexity_counts.get('Low', 0))
+                            math_complexity = document_analysis.get('mathematical_complexity', 'Unknown')
+                            st.metric("Complexity", math_complexity)
     else:
-        st.info("Upload a Basel regulatory document to begin sophisticated AI-powered analysis")
+        st.info("Please upload a document to begin AI-powered analysis")
         
-        # Enhanced sample document showcase
-        st.subheader("Supported Document Types")
+        # Sample document showcase
+        st.subheader("Sample Documents")
         sample_docs = [
-            {
-                "name": "Basel MAR21 Framework", 
-                "type": "Market Risk Regulation", 
-                "complexity": "Very High",
-                "features": "Sensitivities-based method, correlation matrices, curvature risk"
-            },
-            {
-                "name": "Basel Credit Risk Standards", 
-                "type": "Credit Risk Regulation", 
-                "complexity": "High",
-                "features": "Risk weights, exposure calculations, correlation parameters"
-            },
-            {
-                "name": "Regulatory Technical Standards", 
-                "type": "Implementation Guide", 
-                "complexity": "Medium",
-                "features": "Technical specifications, validation requirements"
-            },
+            {"name": "GDPR Compliance Guide", "type": "Regulatory", "pages": 89, "complexity": "High"},
+            {"name": "SOX Internal Controls", "type": "Financial", "pages": 156, "complexity": "Medium"},
+            {"name": "API Security Standards", "type": "Technical", "pages": 45, "complexity": "Medium"},
         ]
         
         for doc in sample_docs:
-            with st.expander(f"{doc['name']} - {doc['complexity']} Complexity"):
-                col1, col2 = st.columns(2)
+            with st.expander(f"{doc['name']}"):
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     st.write(f"**Type:** {doc['type']}")
-                    st.write(f"**Mathematical Complexity:** {doc['complexity']}")
                 with col2:
-                    st.write(f"**Key Features:** {doc['features']}")
+                    st.write(f"**Pages:** {doc['pages']}")
+                with col3:
+                    st.write(f"**Complexity:** {doc['complexity']}")
 
-def render_sophisticated_brd_generation_tab(uploaded_file):
-    """Enhanced BRD generation with sophisticated regulatory analysis"""
+def render_brd_generation_tab(uploaded_file):
+    """Render BRD generation tab"""
     if uploaded_file is not None and st.session_state.get('document_text'):
-        # Enhanced BRD generation interface
-        st.subheader("Sophisticated AI-Powered BRD Generation")
+        # Enhanced BRD generation
+        st.subheader("AI-Powered BRD Generation")
         
-        # Advanced generation options
+        # Generation options
         col1, col2, col3 = st.columns(3)
         with col1:
             template_type = st.selectbox(
-                "Regulatory Template",
-                ["Basel MAR Framework", "Standard Enterprise", "Technical Integration", "Risk Management Compliance"]
+                "BRD Template",
+                ["Standard Enterprise", "Regulatory Compliance", "Technical Integration", "Business Process"]
             )
         with col2:
-            sophistication_level = st.selectbox(
-                "Sophistication Level",
-                ["Expert", "Advanced", "Professional", "Standard"]
+            quality_level = st.selectbox(
+                "Quality Level",
+                ["Standard", "Premium", "Enterprise"]
             )
         with col3:
-            mathematical_focus = st.selectbox(
-                "Mathematical Integration",
-                ["Comprehensive", "Detailed", "Standard", "Minimal"]
+            stakeholder_focus = st.selectbox(
+                "Stakeholder Focus",
+                ["Balanced", "Business-Heavy", "Technical-Heavy", "Compliance-Heavy"]
             )
         
-        # Sophisticated generation settings
-        with st.expander("Advanced Generation Configuration"):
+        # Advanced generation options
+        with st.expander("Advanced Generation Settings"):
             col1, col2 = st.columns(2)
             with col1:
-                include_formula_analysis = st.checkbox("Advanced Formula Analysis", value=True)
-                include_correlation_matrices = st.checkbox("Correlation Matrix Integration", value=True)
-                include_validation_framework = st.checkbox("Mathematical Validation Requirements", value=True)
-                include_basel_references = st.checkbox("Comprehensive Basel MAR References", value=True)
+                include_risk_analysis = st.checkbox("Include Risk Analysis", value=True)
+                include_timeline = st.checkbox("Include Implementation Timeline", value=True)
+                include_kpis = st.checkbox("Include Success Metrics", value=True)
             with col2:
-                regulatory_depth = st.selectbox("Regulatory Depth", ["Comprehensive", "Detailed", "Standard"])
-                mathematical_precision = st.selectbox("Mathematical Precision", ["PhD Level", "Expert", "Professional"])
-                audit_readiness = st.checkbox("Audit-Ready Documentation", value=True)
-                implementation_guidance = st.checkbox("Technical Implementation Guidance", value=True)
+                auto_stakeholder_mapping = st.checkbox("Auto-map Stakeholders", value=True)
+                compliance_validation = st.checkbox("Compliance Validation", value=True)
+                generate_appendices = st.checkbox("Generate Appendices", value=True)
         
-        # Sophisticated generation button
-        if st.button("Generate Sophisticated Basel-Compliant BRD", type="primary", use_container_width=True):
-            with st.spinner("Generating comprehensive regulatory BRD with advanced mathematical analysis..."):
+        # Generate button
+        if st.button("Generate Enhanced BRD", type="primary", use_container_width=True):
+            with st.spinner("Generating comprehensive BRD..."):
                 try:
                     result = generate_enhanced_brd(
                         st.session_state.document_text,
@@ -356,279 +258,185 @@ def render_sophisticated_brd_generation_tab(uploaded_file):
                     st.session_state.brd_content = result['brd_content']
                     st.session_state.quality_scores = result['quality_scores']
                     st.session_state.compliance_checks = result['compliance_checks']
-                    st.session_state.generation_statistics = result.get('generation_statistics', {})
                     st.session_state.generated = True
                     
-                    # Display generation statistics
-                    stats = result.get('generation_statistics', {})
-                    st.success("Sophisticated BRD Generation Complete!")
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Sections Generated", stats.get('total_sections', 0))
-                    with col2:
-                        st.metric("Mathematical References", stats.get('mathematical_references', 0))
-                    with col3:
-                        st.metric("Average Quality", f"{stats.get('average_quality', 0):.1f}%")
-                    with col4:
-                        st.metric("Sophistication Ratio", f"{stats.get('sophisticated_content_ratio', 0):.2f}")
-                    
+                    st.success("Enhanced BRD Generation Complete!")
                     st.balloons()
                     
                 except Exception as e:
                     logger.error(f"Error generating BRD: {e}")
-                    st.error(f"Error generating sophisticated BRD: {str(e)}")
+                    st.error(f"Error generating BRD: {str(e)}")
         
-        # Enhanced content display and editing
+        # Display generated content with export options
         if st.session_state.get('generated') and st.session_state.get('brd_content'):
             st.markdown("---")
-            st.header("Sophisticated BRD - Review & Enhancement")
+            st.header("Enhanced BRD - Review & Edit")
             
-            render_enhanced_export_section()
-            render_sophisticated_brd_editor()
+            render_export_section()
+            render_brd_content_editor()
             
     else:
-        st.info("Upload and analyze a regulatory document first in the Document Analysis tab")
-        
-        # Enhanced guidance
-        st.subheader("BRD Generation Capabilities")
-        capabilities = [
-            "**Mathematical Formula Integration**: Automatic extraction and contextual placement of Basel formulas",
-            "**Regulatory Table Embedding**: Sophisticated table analysis and requirement mapping", 
-            "**MAR Reference Linking**: Comprehensive cross-referencing to Basel MAR sections",
-            "**Compliance Validation**: Built-in quality scoring and regulatory compliance checks",
-            "**Technical Specification**: Detailed implementation guidance with mathematical precision",
-            "**Audit Documentation**: Professional-grade documentation ready for regulatory review"
-        ]
-        
-        for capability in capabilities:
-            st.write(f"• {capability}")
+        st.info("Please upload and analyze a document first in the Document Analysis tab")
 
-def render_enhanced_export_section():
-    """Enhanced export with sophisticated validation and options"""
-    st.subheader("Professional Export Options")
-    
-    # Enhanced validation display
-    if st.session_state.get('brd_content'):
-        # Calculate enhanced metrics
-        total_sections = len(st.session_state.brd_content)
-        quality_scores = list(st.session_state.get('quality_scores', {}).values())
-        avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0
-        
-        # Mathematical content analysis
-        mathematical_refs = 0
-        basel_refs = 0
-        for content in st.session_state.brd_content.values():
-            content_str = str(content)
-            mathematical_refs += content_str.count('formula') + content_str.count('calculation') + content_str.count('correlation')
-            basel_refs += content_str.count('MAR21') + content_str.count('Basel')
-        
-        # Enhanced readiness assessment
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            readiness = "Ready" if avg_quality > 75 else "Review Needed"
-            color = "✅" if avg_quality > 75 else "⚠️"
-            st.metric("Export Readiness", f"{color} {readiness}")
-        with col2:
-            st.metric("Average Quality", f"{avg_quality:.0f}%")
-        with col3:
-            st.metric("Mathematical Integration", mathematical_refs)
-        with col4:
-            st.metric("Regulatory References", basel_refs)
-    
-    # Sophisticated export buttons
+def render_export_section():
+    """Render export options section"""
+    st.subheader("Export Options")
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("📄 Professional PDF", type="secondary", use_container_width=True):
+        if st.button("Export to Word", type="secondary"):
             try:
-                with st.spinner("Creating professional PDF with embedded mathematical content..."):
-                    pdf_doc = export_to_pdf(
-                        st.session_state.brd_content,
-                        st.session_state.get('extracted_images', {})
-                    )
-                    st.download_button(
-                        label="Download Professional PDF",
-                        data=pdf_doc.getvalue(),
-                        file_name=f"BRD_Professional_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                        mime="application/pdf",
-                        help="Professional PDF with embedded formulas and regulatory tables"
-                    )
-                    st.success("Professional PDF export completed!")
+                word_doc = export_to_word_docx(st.session_state.brd_content)
+                st.download_button(
+                    label="Download Word Document",
+                    data=word_doc.getvalue(),
+                    file_name=f"BRD_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+            except ImportError:
+                st.error("Word export requires python-docx. Please install it.")
             except Exception as e:
-                st.error(f"PDF export error: {str(e)}")
+                st.error(f"Error exporting to Word: {str(e)}")
     
     with col2:
-        if st.button("📝 Word Document", type="secondary", use_container_width=True):
+        if st.button("Export to PDF", type="secondary"):
             try:
-                with st.spinner("Creating Word document with mathematical integration..."):
-                    word_doc = export_to_word_docx(
-                        st.session_state.brd_content,
-                        st.session_state.get('extracted_images', {})
-                    )
-                    st.download_button(
-                        label="Download Word Document",
-                        data=word_doc.getvalue(),
-                        file_name=f"BRD_Enhanced_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        help="Word document with integrated mathematical formulas"
-                    )
-                    st.success("Word export completed!")
+                pdf_doc = export_to_pdf(st.session_state.brd_content)
+                st.download_button(
+                    label="Download PDF Document",
+                    data=pdf_doc.getvalue(),
+                    file_name=f"BRD_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                    mime="application/pdf"
+                )
+            except ImportError:
+                st.error("PDF export requires ReportLab. Please install it.")
             except Exception as e:
-                st.error(f"Word export error: {str(e)}")
+                st.error(f"Error exporting to PDF: {str(e)}")
     
     with col3:
-        if st.button("📊 Excel Analysis", type="secondary", use_container_width=True):
+        if st.button("Export to Excel", type="secondary"):
             try:
-                with st.spinner("Creating Excel with data analysis..."):
-                    excel_doc = export_to_excel(
-                        st.session_state.brd_content,
-                        st.session_state.get('extracted_images', {})
-                    )
-                    st.download_button(
-                        label="Download Excel Analysis",
-                        data=excel_doc.getvalue(),
-                        file_name=f"BRD_Analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        help="Excel file with data analysis and image references"
-                    )
-                    st.success("Excel export completed!")
+                excel_doc = export_to_excel(st.session_state.brd_content)
+                st.download_button(
+                    label="Download Excel File",
+                    data=excel_doc.getvalue(),
+                    file_name=f"BRD_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
             except Exception as e:
-                st.error(f"Excel export error: {str(e)}")
+                st.error(f"Error exporting to Excel: {str(e)}")
     
     with col4:
-        if st.button("🔗 JSON Data", type="secondary", use_container_width=True):
+        if st.button("Export to JSON", type="secondary"):
             try:
-                json_content = export_to_json(
-                    st.session_state.brd_content,
-                    st.session_state.get('extracted_images', {})
-                )
+                json_content = export_to_json(st.session_state.brd_content)
                 st.download_button(
-                    label="Download JSON Data",
+                    label="Download JSON File",
                     data=json_content,
-                    file_name=f"BRD_Data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                    mime="application/json",
-                    help="JSON with complete metadata and structure"
+                    file_name=f"BRD_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json"
                 )
-                st.success("JSON export completed!")
             except Exception as e:
-                st.error(f"JSON export error: {str(e)}")
+                st.error(f"Error exporting to JSON: {str(e)}")
 
-def render_sophisticated_brd_editor():
-    """Enhanced BRD content editor with sophisticated features"""
-    # Enhanced quality overview
+def render_brd_content_editor():
+    """Render BRD content editor"""
+    # Quality overview
     if st.session_state.quality_scores:
-        quality_scores = st.session_state.quality_scores
-        avg_quality = sum(quality_scores.values()) / len(quality_scores)
-        
-        # Quality distribution
-        excellent = len([s for s in quality_scores.values() if s >= 90])
-        good = len([s for s in quality_scores.values() if s >= 75])
-        needs_work = len([s for s in quality_scores.values() if s < 60])
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Overall Quality", f"{avg_quality:.0f}%")
-        with col2:
-            st.metric("Excellent Sections", excellent)
-        with col3:
-            st.metric("Good Sections", good)
-        with col4:
-            st.metric("Need Enhancement", needs_work)
+        avg_quality = sum(st.session_state.quality_scores.values()) / len(st.session_state.quality_scores)
+        st.success(f"**Overall Quality Score: {avg_quality:.1f}%**")
     
-    # Enhanced section editing with mathematical context
+    # Section tabs for editing
     section_names = list(st.session_state.brd_content.keys())
-    if section_names:
-        selected_section = st.selectbox("Select Section for Detailed Review", section_names)
-        
-        if selected_section:
-            content = st.session_state.brd_content[selected_section]
-            quality_score = st.session_state.quality_scores.get(selected_section, 0)
+    section_tabs = st.tabs([name.split('.')[0] + "." for name in section_names])
+    
+    for i, (section_name, content) in enumerate(st.session_state.brd_content.items()):
+        with section_tabs[i]:
+            render_section_editor(section_name, content)
+
+def render_section_editor(section_name: str, content):
+    """Render individual section editor"""
+    # Section header with quality indicator
+    quality_score = st.session_state.quality_scores.get(section_name, 0)
+    
+    col1, col2, col3 = st.columns([3, 1, 1])
+    with col1:
+        st.subheader(section_name)
+    with col2:
+        st.metric("Quality", f"{quality_score:.0f}%")
+    with col3:
+        status = "Good" if quality_score >= 80 else "Fair" if quality_score >= 60 else "Needs Work"
+        st.write(f"Status: {status}")
+    
+    # Section-specific quality checks
+    section_checks = [c for c in st.session_state.compliance_checks if c.section == section_name]
+    if section_checks:
+        with st.expander("Quality Insights"):
+            for check in section_checks:
+                if check.status == "PASS":
+                    st.success(f"✅ **{check.check_type.title()}:** {check.message}")
+                elif check.status == "WARNING":
+                    st.warning(f"⚠️ **{check.check_type.title()}:** {check.message}")
+                else:
+                    st.error(f"❌ **{check.check_type.title()}:** {check.message}")
+    
+    # Content editing
+    if isinstance(content, dict):
+        for subsection_name, subcontent in content.items():
+            st.write(f"**{subsection_name}**")
             
-            # Enhanced section header
-            col1, col2, col3 = st.columns([2, 1, 1])
-            with col1:
-                st.subheader(selected_section)
-            with col2:
-                quality_color = "🟢" if quality_score >= 85 else "🟡" if quality_score >= 70 else "🔴"
-                st.metric("Quality", f"{quality_color} {quality_score:.0f}%")
-            with col3:
-                # Mathematical content indicator
-                content_str = str(content)
-                math_indicators = content_str.count('MAR21') + content_str.count('formula') + content_str.count('correlation')
-                st.metric("Math Integration", math_indicators)
-            
-            # Enhanced content editing
-            if isinstance(content, pd.DataFrame) and len(content) > 0:
-                st.write("**Sophisticated Table Editor:**")
-                st.info(f"Table contains {len(content)} rows and {len(content.columns)} columns with regulatory data")
-                
+            if isinstance(subcontent, pd.DataFrame):
+                # Enhanced table editor
+                st.write("Interactive Table Editor:")
                 edited_df = st.data_editor(
-                    content,
+                    subcontent,
                     use_container_width=True,
                     num_rows="dynamic",
-                    key=f"enhanced_table_{selected_section}",
-                    help="Advanced editing with Basel regulatory validation"
+                    key=f"table_{section_name}_{subsection_name}"
                 )
-                st.session_state.brd_content[selected_section] = edited_df
-                
-            elif isinstance(content, dict):
-                st.write("**Multi-Section Content:**")
-                for subsection_name, subcontent in content.items():
-                    st.write(f"*{subsection_name}*")
-                    
-                    if isinstance(subcontent, pd.DataFrame) and len(subcontent) > 0:
-                        st.data_editor(
-                            subcontent,
-                            use_container_width=True,
-                            key=f"enhanced_subtable_{subsection_name}",
-                            help="Basel-compliant data editing"
-                        )
-                    else:
-                        # Enhanced text editing with mathematical context preservation
-                        if 'MAR21' in str(subcontent) or 'formula' in str(subcontent).lower():
-                            st.info("This section contains mathematical/regulatory content")
-                        
-                        edited_text = st.text_area(
-                            f"Edit {subsection_name}",
-                            value=str(subcontent),
-                            height=300,
-                            key=f"enhanced_text_{subsection_name}",
-                            help="Mathematical formulas and Basel references are preserved"
-                        )
-                        st.session_state.brd_content[selected_section][subsection_name] = edited_text
+                st.session_state.brd_content[section_name][subsection_name] = edited_df
             else:
-                # Enhanced single content editing
-                if 'MAR21' in str(content) or 'formula' in str(content).lower():
-                    st.info("This section contains sophisticated mathematical/regulatory content")
+                # Enhanced text editor
+                render_content_with_images(subcontent, st.session_state.extracted_images)
                 
-                edited_content = st.text_area(
-                    f"Enhance {selected_section}",
-                    value=str(content),
-                    height=400,
-                    key=f"enhanced_content_{selected_section}",
-                    help="Preserve mathematical formulas and regulatory references during editing"
+                edited_text = st.text_area(
+                    f"Edit {subsection_name}",
+                    value=str(subcontent),
+                    height=250,
+                    key=f"text_{section_name}_{subsection_name}"
                 )
-                st.session_state.brd_content[selected_section] = edited_content
+                st.session_state.brd_content[section_name][subsection_name] = edited_text
             
-            # Enhanced quality insights
-            section_checks = [c for c in st.session_state.get('compliance_checks', []) if c.section == selected_section]
-            if section_checks:
-                st.subheader("Quality Enhancement Recommendations")
-                for check in section_checks:
-                    if check.status == "PASS":
-                        st.success(f"✅ **{check.check_type.replace('_', ' ').title()}:** {check.message}")
-                    elif check.status == "WARNING":
-                        st.warning(f"⚠️ **{check.check_type.replace('_', ' ').title()}:** {check.message}")
-                    else:
-                        st.error(f"❌ **{check.check_type.replace('_', ' ').title()}:** {check.message}")
+            st.markdown("---")
+    else:
+        # Single content editing
+        if isinstance(content, pd.DataFrame):
+            st.write("Interactive Table Editor:")
+            edited_df = st.data_editor(
+                content,
+                use_container_width=True,
+                num_rows="dynamic",
+                key=f"table_{section_name}"
+            )
+            st.session_state.brd_content[section_name] = edited_df
+        else:
+            # Enhanced text content editing
+            render_content_with_images(str(content), st.session_state.extracted_images)
+            
+            edited_text = st.text_area(
+                f"Edit {section_name}",
+                value=str(content),
+                height=300,
+                key=f"text_{section_name}"
+            )
+            st.session_state.brd_content[section_name] = edited_text
 
 def render_analytics_tab():
-    """Enhanced analytics with sophisticated regulatory insights"""
-    st.subheader("Sophisticated Analytics Dashboard")
+    """Render analytics dashboard tab"""
+    st.subheader("Analytics Dashboard")
     
     if st.session_state.get('generated') and st.session_state.get('brd_content'):
-        # Enhanced analytics dashboards
+        # Create analytics dashboards
         create_compliance_dashboard()
         
         st.markdown("---")
@@ -639,37 +447,42 @@ def render_analytics_tab():
         with col2:
             create_risk_heatmap()
         
-        # Enhanced workflow timeline
+        # Workflow timeline
         st.markdown("---")
-        render_sophisticated_workflow_timeline()
+        render_workflow_timeline()
         
     else:
-        st.info("Generate a sophisticated BRD first to view advanced analytics")
+        st.info("Generate a BRD first to view analytics")
 
-def render_sophisticated_workflow_timeline():
-    """Enhanced workflow timeline with Basel-specific milestones"""
-    st.subheader("Basel Implementation Timeline")
+def render_workflow_timeline():
+    """Render workflow timeline"""
+    st.subheader("Workflow Timeline")
     
     timeline_steps = [
-        {"step": "Document Analysis & Formula Extraction", "status": "completed", "date": "Today", "details": "Mathematical formulas and regulatory tables extracted"},
-        {"step": "Sophisticated BRD Generation", "status": "completed", "date": "Today", "details": "Basel MAR21 compliant requirements generated"},
-        {"step": "Mathematical Validation & Review", "status": "in_progress", "date": "Next 2 days", "details": "PV01/CS01 calculations and correlation matrices"},
-        {"step": "Regulatory Compliance Verification", "status": "pending", "date": "Next week", "details": "Basel framework compliance validation"},
-        {"step": "Quantitative Team Approval", "status": "pending", "date": "In 2 weeks", "details": "Mathematical model validation sign-off"},
-        {"step": "Regulatory Authority Submission", "status": "pending", "date": "Month end", "details": "Supervisory review and approval"}
+        {"step": "Document Upload", "status": "completed", "date": "Today"},
+        {"step": "AI Analysis", "status": "completed", "date": "Today"},
+        {"step": "BRD Generation", "status": "in_progress", "date": "Today"},
+        {"step": "Quality Review", "status": "pending", "date": "Tomorrow"},
+        {"step": "Stakeholder Approval", "status": "pending", "date": "Next Week"},
+        {"step": "Final Sign-off", "status": "pending", "date": "TBD"}
     ]
     
     for step in timeline_steps:
-        status_colors = {"completed": "#10B981", "in_progress": "#F59E0B", "pending": "#6B7280"}
-        status_icons = {"completed": "✅", "in_progress": "⏳", "pending": "⭕"}
+        status_color = {
+            "completed": "#10B981",
+            "in_progress": "#F59E0B", 
+            "pending": "#6B7280"
+        }[step["status"]]
         
-        color = status_colors[step["status"]]
-        icon = status_icons[step["status"]]
+        status_icon = {
+            "completed": "✅",
+            "in_progress": "⏳",
+            "pending": "⭕"
+        }[step["status"]]
         
         st.markdown(f"""
-        <div style="border-left: 4px solid {color}; padding-left: 1rem; margin-bottom: 1rem;">
-            {icon} <strong>{step['step']}</strong> - {step['date']}<br>
-            <small style="color: {color};">{step['status'].replace('_', ' ').title()}</small><br>
-            <em>{step['details']}</em>
+        <div class="timeline-item" style="border-left-color: {status_color};">
+            {status_icon} <strong>{step['step']}</strong> - {step['date']}<br>
+            <small style="color: {status_color};">{step['status'].replace('_', ' ').title()}</small>
         </div>
         """, unsafe_allow_html=True)
