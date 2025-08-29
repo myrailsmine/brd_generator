@@ -896,6 +896,39 @@ def render_enhanced_extraction_results(document_analysis: Dict[str, Any], extrac
                     st.info("No mathematical formulas extracted from document")
 
 # Update the main process_document function to use enhanced version
+def display_image_from_base64(img_b64: str, caption: str = "", max_width: int = None):
+    """Display image from base64 string"""
+    try:
+        img_data = base64.b64decode(img_b64)
+        img = Image.open(BytesIO(img_data))
+        
+        if max_width:
+            img.thumbnail((max_width, max_width))
+        
+        st.image(img, caption=caption, use_container_width=True if not max_width else False)
+    except Exception as e:
+        logger.error(f"Error displaying image: {str(e)}")
+        st.error(f"Error displaying image: {caption}")
+
+def render_content_with_images(content: str, images: Dict[str, str]):
+    """Render text content and replace image references with actual images"""
+    if not content:
+        return
+    
+    # Split content by image references
+    parts = re.split(r'\[IMAGE:\s*([^\]]+)\]', content)
+    
+    for i, part in enumerate(parts):
+        if i % 2 == 0:  # Text content
+            if part.strip():
+                st.markdown(part)
+        else:  # Image reference
+            image_key = part.strip()
+            if image_key in images:
+                display_image_from_base64(images[image_key], caption=image_key)
+            else:
+                st.info(f"Image reference: {image_key} (not found)")
+
 def process_document(uploaded_file, extract_images: bool = True, extract_formulas: bool = True) -> Tuple[str, Dict[str, str], List[Dict[str, Any]], Dict[str, Any]]:
     """
     Main document processing function - now with enhanced table and formula extraction
