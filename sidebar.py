@@ -45,6 +45,12 @@ def render_sidebar() -> Tuple[any, Dict[str, any]]:
         help="Extract structured tables including correlation matrices, risk weights, and regulatory data"
     )
     
+    embed_elements = st.sidebar.checkbox(
+        "Embed Elements in Document", 
+        value=False,
+        help="Create enhanced document with formulas, tables, and images embedded at original positions"
+    )
+    
     # Advanced AI analysis options
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Advanced Analysis**")
@@ -150,6 +156,7 @@ def render_sidebar() -> Tuple[any, Dict[str, any]]:
         'extract_images': extract_images,
         'extract_formulas': extract_formulas,
         'extract_tables': extract_tables,
+        'embed_elements': embed_elements,
         
         # Advanced analysis flags
         'intelligent_analysis': intelligent_analysis,
