@@ -160,7 +160,7 @@ def export_to_word_docx_enhanced(brd_content: Dict[str, Any], images: Dict[str, 
                     # Add subsection heading
                     subheading = doc.add_heading(subsection_name, level=2)
                     
-                    if isinstance(subcontent, pd.DataFrame) and not subcontent.empty:
+                    if isinstance(subcontent, pd.DataFrame) and len(subcontent) > 0:
                         # Add enhanced table
                         add_enhanced_table_to_doc(doc, subcontent, subsection_name)
                     else:
@@ -169,7 +169,7 @@ def export_to_word_docx_enhanced(brd_content: Dict[str, Any], images: Dict[str, 
                     
                     doc.add_paragraph()  # Add spacing
             
-            elif isinstance(content, pd.DataFrame) and not content.empty:
+            elif isinstance(content, pd.DataFrame) and len(content) > 0:
                 # Add enhanced table
                 add_enhanced_table_to_doc(doc, content, section_name)
             
