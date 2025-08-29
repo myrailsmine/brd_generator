@@ -427,4 +427,338 @@ def generate_sophisticated_sample_data(columns: List[str]) -> List[List[str]]:
     if any('risk' in col for col in columns_lower) and any('requirement' in col for col in columns_lower):
         # Risk requirements table
         sample_entries = [
-            ["REQ-001", "Market Risk Capital Calculation", "Implementation of MAR21.4 sensitivities-based method for delta, vega, and curv
+            ["REQ-001", "Market Risk Capital Calculation", "Implementation of MAR21.4 sensitivities-based method for delta, vega, and curvature risk positions", "Risk Management Team", "Critical", "99.5% accuracy in PV01/CS01 calculations", "Sensitivities-based method per Basel MAR21"],
+            ["REQ-002", "Correlation Parameter Application", "Cross-bucket correlations γbc=50% per MAR21.50 for GIRR aggregation across currencies", "Quantitative Analytics", "High", "Correlation values within ±2% of prescribed parameters", "50% correlation for different currency buckets"],
+            ["REQ-003", "Risk Weight Implementation", "Delta GIRR risk weights per Table 1: 1.7% (0.25y), 1.6% (1y), 1.1% (5y+)", "Market Risk", "High", "Risk weights applied correctly per tenor", "Implementation of MAR21.42 prescribed weights"],
+            ["REQ-004", "Bucket Aggregation Formula", "Within-bucket aggregation: Kb = √(∑WSk² + ∑∑ρkl×WSk×WSl)", "Systems Development", "Critical", "Mathematical precision in aggregation calculations", "MAR21.4(4) bucket-level capital requirement"],
+            ["REQ-005", "Curvature Risk Calculation", "CVRk = -min(∑(Si,k^up - Si,k×δi,k), ∑(Si,k^down - Si,k×δi,k))", "Risk Technology", "Critical", "Accurate curvature risk computation", "MAR21.5 curvature methodology implementation"],
+            ["REQ-006", "Three Correlation Scenarios", "High (×1.25), Medium (standard), Low (÷2) correlation scenarios per MAR21.6", "Risk Analytics", "High", "All three scenarios calculated and maximum selected", "MAR21.7 total capital requirement methodology"]
+        ]
+    elif any('stakeholder' in col for col in columns_lower):
+        # Sophisticated stakeholder table
+        sample_entries = [
+            ["Chief Risk Officer", "Executive Sponsor", "9", "9", "Weekly executive briefings", "Final sign-off required"],
+            ["Head of Market Risk", "Primary Business Owner", "9", "8", "Daily operational oversight", "Implementation approval required"],
+            ["Basel Implementation Team", "Technical Implementation", "8", "7", "Bi-weekly progress reviews", "Technical sign-off required"],
+            ["Quantitative Analytics", "Mathematical Validation", "7", "6", "Formula validation meetings", "Model approval required"],
+            ["Regulatory Affairs", "Compliance Oversight", "8", "7", "Regulatory liaison", "Compliance approval required"],
+            ["IT Architecture", "System Implementation", "6", "8", "Technical architecture reviews", "System approval required"]
+        ]
+    elif any('assumption' in col for col in columns_lower) or any('dependency' in col for col in columns_lower):
+        # Assumptions and dependencies
+        sample_entries = [
+            ["ASM-001", "MAR21 Framework Stability", "Basel MAR21 requirements remain stable through implementation", "Medium", "Regulatory monitoring required"],
+            ["ASM-002", "Mathematical Model Accuracy", "PV01/CS01 calculations achieve 99%+ accuracy in validation testing", "High", "Model validation framework needed"],
+            ["DEP-001", "Risk Data Warehouse", "Availability of historical market data for correlation calibration", "IT Data Team", "Q2 2024", "In Progress"],
+            ["DEP-002", "Regulatory Approval", "Supervisory approval for internal model validation approach", "Regulatory Affairs", "Q3 2024", "Pending"],
+            ["DEP-003", "System Infrastructure", "Computational capacity for real-time sensitivities calculation", "IT Infrastructure", "Q1 2024", "Approved"]
+        ]
+    elif any('regulation' in col for col in columns_lower) or any('compliance' in col for col in columns_lower):
+        # Regulatory compliance table
+        sample_entries = [
+            ["MAR21.4", "MAR21.4", "Delta and Vega Risk Capital Requirement", "Implementation of sensitivities-based aggregation methodology", "Critical regulatory compliance requirement"],
+            ["MAR21.5", "MAR21.5", "Curvature Risk Capital Requirement", "Curvature risk calculation using upward/downward shock scenarios", "Advanced mathematical implementation required"],
+            ["MAR21.42", "Table 1", "Delta GIRR Risk Weights", "Prescribed risk weights by tenor: 1.7% (short), 1.1% (long)", "Exact implementation of prescribed weights"],
+            ["MAR21.50", "MAR21.50", "Cross-Currency Correlation", "50% correlation parameter for aggregating across GIRR buckets", "Cross-bucket correlation methodology"],
+            ["MAR21.6", "MAR21.6", "Correlation Scenarios", "High/Medium/Low correlation scenarios for stress testing", "Three-scenario approach implementation"]
+        ]
+    else:
+        # Generic sophisticated regulatory entries
+        sample_entries = [
+            ["ITEM-001", "Basel MAR21 Implementation", "Comprehensive implementation of market risk sensitivities framework", "Regulatory requirement", "Q4 2024"],
+            ["ITEM-002", "Mathematical Model Validation", "Validation of PV01, CS01, and correlation parameter calculations", "Technical requirement", "Q3 2024"],
+            ["ITEM-003", "Risk Aggregation Methodology", "Cross-bucket and cross-risk class aggregation per MAR21.4-21.7", "Methodological requirement", "Q4 2024"],
+            ["ITEM-004", "Correlation Matrix Implementation", "Implementation of prescribed correlation matrices per Basel tables", "Data requirement", "Q3 2024"]
+        ]
+    
+    # Pad or trim entries to match column count
+    for entry in sample_entries:
+        if len(entry) < len(columns):
+            entry.extend([''] * (len(columns) - len(entry)))
+        elif len(entry) > len(columns):
+            entry[:] = entry[:len(columns)]
+    
+    return sample_entries[:8]  # Return up to 8 sophisticated entries
+
+def calculate_quality_score_enhanced(section_name: str, content: Any, structure_config: Dict[str, Any], images: Dict[str, str] = None) -> Tuple[float, List[QualityCheck]]:
+    """Enhanced quality calculation with sophisticated regulatory assessment"""
+    checks = []
+    score = 0.0
+    max_score = 100.0
+    
+    try:
+        # Basic completeness check
+        if content and str(content).strip():
+            score += 20
+            checks.append(QualityCheck(section_name, "completeness", "PASS", "Section has content", "info"))
+        else:
+            checks.append(QualityCheck(section_name, "completeness", "FAIL", "Section is empty", "error"))
+            return 0.0, checks
+        
+        # Mathematical content integration check
+        content_str = str(content)
+        math_indicators = ['MAR21', 'formula', 'calculation', 'correlation', 'risk weight', 'sensitivity']
+        math_score = sum(1 for indicator in math_indicators if indicator.lower() in content_str.lower())
+        
+        if math_score >= 3:
+            score += 15
+            checks.append(QualityCheck(section_name, "mathematical_integration", "PASS", f"Strong mathematical content ({math_score} indicators)", "info"))
+        elif math_score >= 1:
+            score += 8
+            checks.append(QualityCheck(section_name, "mathematical_integration", "WARNING", f"Limited mathematical content ({math_score} indicators)", "warning"))
+        
+        # Regulatory sophistication check
+        regulatory_terms = ['basel', 'supervisory', 'compliance', 'regulatory', 'framework', 'implementation']
+        reg_score = sum(1 for term in regulatory_terms if term in content_str.lower())
+        
+        if reg_score >= 4:
+            score += 15
+            checks.append(QualityCheck(section_name, "regulatory_sophistication", "PASS", "Comprehensive regulatory content", "info"))
+        elif reg_score >= 2:
+            score += 8
+            checks.append(QualityCheck(section_name, "regulatory_sophistication", "WARNING", "Moderate regulatory content", "warning"))
+        
+        # Structure-specific enhanced checks
+        if structure_config.get("type") == "table":
+            if isinstance(content, pd.DataFrame) and len(content) > 0:
+                score += 20
+                checks.append(QualityCheck(section_name, "format", "PASS", "Proper table format", "info"))
+                
+                # Enhanced row count assessment
+                row_count = len(content)
+                if row_count >= 8:
+                    score += 15
+                    checks.append(QualityCheck(section_name, "content_depth", "PASS", f"Comprehensive detail ({row_count} rows)", "info"))
+                elif row_count >= 5:
+                    score += 10
+                    checks.append(QualityCheck(section_name, "content_depth", "WARNING", f"Good detail ({row_count} rows)", "warning"))
+                elif row_count >= 3:
+                    score += 5
+                    checks.append(QualityCheck(section_name, "content_depth", "WARNING", f"Adequate detail ({row_count} rows)", "warning"))
+                else:
+                    checks.append(QualityCheck(section_name, "content_depth", "FAIL", f"Insufficient detail ({row_count} rows)", "error"))
+                    
+                # Enhanced data quality assessment
+                non_empty_cells = content.notna().sum().sum()
+                total_cells = len(content) * len(content.columns)
+                fill_rate = non_empty_cells / total_cells if total_cells > 0 else 0
+                
+                if fill_rate > 0.9:
+                    score += 15
+                    checks.append(QualityCheck(section_name, "data_quality", "PASS", f"Excellent data completeness ({fill_rate:.1%})", "info"))
+                elif fill_rate > 0.7:
+                    score += 10
+                    checks.append(QualityCheck(section_name, "data_quality", "WARNING", f"Good data completeness ({fill_rate:.1%})", "warning"))
+                elif fill_rate > 0.5:
+                    score += 5
+                    checks.append(QualityCheck(section_name, "data_quality", "WARNING", f"Fair data completeness ({fill_rate:.1%})", "warning"))
+                else:
+                    checks.append(QualityCheck(section_name, "data_quality", "FAIL", f"Poor data completeness ({fill_rate:.1%})", "error"))
+                
+                # Basel-specific content validation
+                basel_specific_terms = ['MAR21', 'correlation', 'risk weight', 'bucket', 'sensitivity', 'curvature']
+                basel_content_score = sum(1 for term in basel_specific_terms if term in content_str.lower())
+                
+                if basel_content_score >= 3:
+                    score += 15
+                    checks.append(QualityCheck(section_name, "basel_compliance", "PASS", f"Strong Basel content ({basel_content_score} terms)", "info"))
+                elif basel_content_score >= 1:
+                    score += 5
+                    checks.append(QualityCheck(section_name, "basel_compliance", "WARNING", f"Limited Basel content ({basel_content_score} terms)", "warning"))
+                    
+            else:
+                checks.append(QualityCheck(section_name, "format", "FAIL", "Should be in table format", "error"))
+        
+        elif structure_config.get("type") == "text":
+            content_str = str(content)
+            word_count = len(content_str.split())
+            
+            # Enhanced content depth assessment
+            if word_count > 500:
+                score += 25
+                checks.append(QualityCheck(section_name, "detail_level", "PASS", f"Comprehensive content ({word_count} words)", "info"))
+            elif word_count > 300:
+                score += 20
+                checks.append(QualityCheck(section_name, "detail_level", "WARNING", f"Good content ({word_count} words)", "warning"))
+            elif word_count > 150:
+                score += 10
+                checks.append(QualityCheck(section_name, "detail_level", "WARNING", f"Adequate content ({word_count} words)", "warning"))
+            else:
+                checks.append(QualityCheck(section_name, "detail_level", "FAIL", f"Insufficient content ({word_count} words)", "error"))
+        
+        return min(score, max_score), checks
+    
+    except Exception as e:
+        logger.error(f"Error calculating quality score for {section_name}: {e}")
+        checks.append(QualityCheck(section_name, "error", "FAIL", f"Error in quality calculation: {str(e)}", "error"))
+        return 0.0, checks
+
+def generate_enhanced_brd_with_sophistication(document_text: str, extracted_images: Dict[str, str], extracted_formulas: List[Any], document_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate sophisticated BRD with comprehensive mathematical and regulatory analysis"""
+    logger.info("Starting sophisticated BRD generation with advanced mathematical analysis")
+    
+    brd_content = {}
+    quality_scores = {}
+    compliance_checks = []
+    
+    # Initialize enhanced LLM
+    llm = init_enhanced_llm()
+    
+    total_sections = len(ENHANCED_BRD_STRUCTURE)
+    section_count = 0
+    
+    for section_name, section_config in ENHANCED_BRD_STRUCTURE.items():
+        try:
+            if section_config.get("type") == "parent":
+                brd_content[section_name] = {}
+                for subsection_name, subsection_config in section_config.get("subsections", {}).items():
+                    logger.info(f"Generating sophisticated content for {subsection_name}")
+                    
+                    content = generate_intelligent_brd_section_enhanced(
+                        llm, subsection_name, subsection_config, document_text,
+                        extracted_images, extracted_formulas, document_analysis
+                    )
+                    
+                    if subsection_config.get("type") == "table":
+                        df = parse_table_content_enhanced(content, subsection_config.get("columns", []))
+                        brd_content[section_name][subsection_name] = df
+                    else:
+                        brd_content[section_name][subsection_name] = content
+                    
+                    # Calculate enhanced quality score
+                    score, checks = calculate_quality_score_enhanced(subsection_name, content, subsection_config, extracted_images)
+                    quality_scores[subsection_name] = score
+                    compliance_checks.extend(checks)
+            else:
+                logger.info(f"Generating sophisticated content for {section_name}")
+                
+                content = generate_intelligent_brd_section_enhanced(
+                    llm, section_name, section_config, document_text,
+                    extracted_images, extracted_formulas, document_analysis
+                )
+                
+                if section_config.get("type") == "table":
+                    df = parse_table_content_enhanced(content, section_config.get("columns", []))
+                    brd_content[section_name] = df
+                else:
+                    brd_content[section_name] = content
+                
+                # Calculate enhanced quality score
+                score, checks = calculate_quality_score_enhanced(section_name, content, section_config, extracted_images)
+                quality_scores[section_name] = score
+                compliance_checks.extend(checks)
+            
+            section_count += 1
+            logger.info(f"Completed {section_count}/{total_sections} sections with sophisticated processing")
+            
+        except Exception as e:
+            logger.error(f"Error generating section {section_name}: {e}")
+            # Add enhanced error handling
+            if section_config.get("type") == "parent":
+                brd_content[section_name] = {"error": f"Sophisticated processing error: {str(e)}"}
+            else:
+                brd_content[section_name] = f"Sophisticated processing error: {str(e)}"
+            
+            quality_scores[section_name] = 0.0
+            compliance_checks.append(QualityCheck(section_name, "generation_error", "FAIL", str(e), "error"))
+    
+    # Generate comprehensive statistics
+    total_mathematical_references = sum(str(content).count('MAR21') + str(content).count('correlation') + str(content).count('formula') for content in brd_content.values() if content)
+    avg_quality_score = sum(quality_scores.values()) / len(quality_scores) if quality_scores else 0
+    
+    logger.info("Sophisticated BRD generation completed")
+    logger.info(f"  - Total sections: {total_sections}")
+    logger.info(f"  - Mathematical references: {total_mathematical_references}")
+    logger.info(f"  - Average quality score: {avg_quality_score:.1f}%")
+    logger.info(f"  - Compliance checks: {len(compliance_checks)}")
+    
+    return {
+        'brd_content': brd_content,
+        'quality_scores': quality_scores,
+        'compliance_checks': compliance_checks,
+        'generation_statistics': {
+            'total_sections': total_sections,
+            'mathematical_references': total_mathematical_references,
+            'average_quality': avg_quality_score,
+            'total_formulas_processed': len(extracted_formulas),
+            'total_images_available': len(extracted_images),
+            'document_complexity': document_analysis.get('complexity_score', 0),
+            'mathematical_complexity': document_analysis.get('mathematical_complexity', 'Unknown'),
+            'sophisticated_content_ratio': total_mathematical_references / max(total_sections, 1)
+        }
+    }
+
+def generate_enhanced_placeholder_content_with_images(
+    section_name: str, 
+    section_config: Dict[str, Any], 
+    formulas: List[Any], 
+    document_analysis: Dict[str, Any],
+    images: Dict[str, str]
+) -> str:
+    """Generate sophisticated placeholder content with Basel-specific context"""
+    
+    if section_config.get("type") == "table":
+        columns = section_config.get("columns", ["Column1", "Column2"])
+        sample_data = generate_sophisticated_sample_data(columns)
+        
+        # Create sophisticated table content
+        table_rows = [" | ".join(columns)]
+        
+        for row_data in sample_data:
+            table_rows.append(" | ".join(row_data))
+        
+        return "\n".join(table_rows)
+    else:
+        # Sophisticated text placeholder with advanced regulatory context
+        complexity = document_analysis.get('mathematical_complexity', 'Unknown')
+        frameworks = ', '.join(document_analysis.get('regulatory_framework', ['Basel III']))
+        
+        formula_count = len(formulas) if formulas else 0
+        image_count = len(images) if images else 0
+        
+        return f"""SOPHISTICATED REGULATORY CONTENT FOR {section_name}
+        
+        This section addresses advanced regulatory requirements under {frameworks} framework with {complexity.lower()} mathematical sophistication, incorporating comprehensive Basel MAR21 sensitivities-based methodology.
+        
+        ADVANCED REGULATORY ANALYSIS:
+        - Regulatory Framework: {frameworks}
+        - Mathematical Sophistication: {formula_count} advanced formulas and calculations extracted
+        - Visual Documentation: {image_count} regulatory tables and mathematical expressions
+        - Document Classification: {document_analysis.get('document_type', 'Advanced Regulatory')}
+        - Analytical Complexity: {document_analysis.get('complexity_score', 0):.3f}
+        
+        BASEL MAR21 IMPLEMENTATION REQUIREMENTS:
+        - Sensitivities-based method implementation per MAR21.4 for delta and vega risk aggregation
+        - Curvature risk calculations following MAR21.5 methodology with upward/downward shock scenarios
+        - Correlation parameter applications: high (×1.25), medium (standard), low (÷2) scenarios per MAR21.6
+        - Cross-bucket aggregation using prescribed γbc parameters for risk class consolidation
+        - Mathematical validation requiring 99.5%+ accuracy in PV01/CS01 sensitivity calculations
+        
+        SOPHISTICATED MATHEMATICAL COMPONENTS:
+        {"- Advanced correlation matrix implementations with exponential decay functions" if formula_count > 15 else "- Standard correlation methodologies with prescribed parameters"}
+        {"- Complex curvature risk modeling requiring advanced mathematical validation" if complexity == "Very High" else "- Standard curvature risk procedures with regulatory validation"}
+        {"- Multi-dimensional risk aggregation across buckets, tenors, and currencies" if formula_count > 10 else "- Standard risk aggregation following Basel prescribed methodologies"}
+        
+        REGULATORY COMPLIANCE FRAMEWORK:
+        - Supervisory approval processes per Basel Committee guidelines and national implementation
+        - Mathematical model validation requiring independent verification and ongoing monitoring
+        - Regulatory reporting and documentation standards meeting audit requirements
+        - Risk governance frameworks integrating quantitative methodologies with business oversight
+        - Implementation timeline coordination with regulatory effective dates and transition periods
+        
+        TECHNICAL IMPLEMENTATION SPECIFICATIONS:
+        - Real-time sensitivities calculation infrastructure supporting portfolio-level aggregation
+        - Data architecture supporting historical correlation calibration and stress scenario modeling
+        - Model validation frameworks incorporating backtesting and sensitivity analysis
+        - Regulatory reporting systems with automated compliance monitoring and exception handling
+        
+        Note: This sophisticated placeholder incorporates analysis of {formula_count} mathematical formulas and {image_count} regulatory visual elements. Configure your AI model for complete sophisticated content generation addressing all advanced regulatory requirements of {section_name}."""
+
+# Main entry points for enhanced processing
+def generate_enhanced_brd(document_text: str, extracted_images: Dict[str, str], extracted_formulas: List[Any], document_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    """Main entry point for sophisticated BRD generation"""
+    return generate_enhanced_brd_with_sophistication(document_text, extracted_images, extracted_formulas, document_analysis)
+
+def parse_table_content(content: str, columns: List[str]) -> pd.DataFrame:
+    """Backward compatible table parsing function"""
+    return parse_table_content_enhanced(content, columns)
