@@ -1,5 +1,5 @@
 """
-Enhanced Document Processing Utilities - Core Functionality
+Enhanced Document Processing Utilities - Complete Implementation
 Enterprise-grade PDF processing for Basel regulatory documents with advanced extraction
 """
 
@@ -304,280 +304,85 @@ class EnterpriseImageProcessor:
         
         return min(score, 1.0)
 
-class EnhancedPDFExtractor:
-    """Enterprise-grade PDF extractor with advanced caching and processing"""
-    
-    def __init__(self):
-        self.cache = {}
-        self.extracted_elements = []
-        self.image_processor = EnterpriseImageProcessor()
-    
-    @st.cache_data
-    def _get_cache_key(_self, file_content: bytes, extract_images: bool, extract_formulas: bool) -> str:
-        """Generate cache key for processed document"""
-        return hashlib.md5(f"{len(file_content)}_{extract_images}_{extract_formulas}".encode()).hexdigest()
-    
-    def extract_images_and_formulas_from_pdf_enhanced(self, uploaded_file) -> Tuple[str, Dict[str, str], List[Dict[str, Any]]]:
-        """Enhanced PDF extraction with enterprise-grade processing"""
-        if not FITZ_AVAILABLE:
-            logger.error("PyMuPDF not available for PDF processing")
-            return self._fallback_extraction(uploaded_file)
-        
-        try:
-            # Create cache key
-            uploaded_file.seek(0)
-            file_content = uploaded_file.read()
-            cache_key = self._get_cache_key(file_content, True, True)
-            
-            # Check cache
-            if cache_key in self.cache:
-                logger.info("Using cached extraction results")
-                return self.cache[cache_key]
-            
-            # Create temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                tmp_file.write(file_content)
-                tmp_file_path = tmp_file.name
-            
-            # Initialize results
-            text = ""
-            images = {}
-            formulas = []
-            
-            # Open PDF with enhanced settings
-            doc = fitz.open(tmp_file_path)
-            
-            for page_num in range(len(doc)):
-                page = doc.load_page(page_num)
-                
-                # Extract text with better formatting
-                page_text = self._extract_enhanced_text(page, page_num)
-                text += f"\n=== PAGE {page_num + 1} ===\n{page_text}\n"
-                
-                # Extract mathematical regions as images
-                math_regions = self.image_processor.detect_mathematical_regions(page, page_num + 1)
-                
-                for i, (rect, confidence, element_type) in enumerate(math_regions):
-                    try:
-                        # Extract region as image
-                        mat = fitz.Matrix(3.0, 3.0)  # High resolution
-                        pix = page.get_pixmap(matrix=mat, clip=rect)
-                        img_data = pix.tobytes("png")
-                        
-                        # Enhance image
-                        enhanced_img_data = self.image_processor.enhance_mathematical_image(img_data)
-                        img_b64 = base64.b64encode(enhanced_img_data).decode()
-                        
-                        # Store enhanced image
-                        element_id = f"math_p{page_num+1}_r{i+1}"
-                        images[element_id] = {
-                            'data': img_b64,
-                            'page': page_num + 1,
-                            'type': 'mathematical_formula',
-                            'element_type': element_type,
-                            'confidence': confidence,
-                            'bbox': list(rect)
-                        }
-                        
-                        # Create formula entry
-                        context_text = self._extract_context(page, rect)
-                        formulas.append({
-                            'text': context_text[:200],
-                            'type': element_type,
-                            'page': page_num + 1,
-                            'confidence': confidence,
-                            'context': context_text,
-                            'image_id': element_id,
-                            'bbox': list(rect)
-                        })
-                        
-                        pix = None
-                        
-                    except Exception as e:
-                        logger.warning(f"Error extracting mathematical region: {e}")
-                
-                # Extract table regions as images
-                table_regions = self.image_processor.detect_table_regions(page, page_num + 1)
-                
-                for i, (rect, confidence, element_type) in enumerate(table_regions):
-                    try:
-                        # Extract table as high-resolution image
-                        mat = fitz.Matrix(2.5, 2.5)  # High resolution for tables
-                        pix = page.get_pixmap(matrix=mat, clip=rect)
-                        img_data = pix.tobytes("png")
-                        
-                        # Enhance table image
-                        enhanced_img_data = self.image_processor.enhance_mathematical_image(img_data)
-                        img_b64 = base64.b64encode(enhanced_img_data).decode()
-                        
-                        # Store enhanced table image
-                        element_id = f"table_p{page_num+1}_t{i+1}"
-                        images[element_id] = {
-                            'data': img_b64,
-                            'page': page_num + 1,
-                            'type': 'regulatory_table',
-                            'element_type': element_type,
-                            'confidence': confidence,
-                            'bbox': list(rect)
-                        }
-                        
-                        # Create table entry for formulas list
-                        table_context = self._extract_context(page, rect)
-                        formulas.append({
-                            'text': f"[TABLE IMAGE: {element_id}]",
-                            'type': element_type,
-                            'page': page_num + 1,
-                            'confidence': confidence,
-                            'context': table_context,
-                            'image_id': element_id,
-                            'bbox': list(rect)
-                        })
-                        
-                        pix = None
-                        
-                    except Exception as e:
-                        logger.warning(f"Error extracting table region: {e}")
-                
-                # Extract regular images
-                try:
-                    image_list = page.get_images(full=True)
-                    for img_index, img in enumerate(image_list):
-                        xref = img[0]
-                        pix = fitz.Pixmap(doc, xref)
-                        
-                        if pix.n < 5:  # GRAY or RGB
-                            img_data = pix.tobytes("png")
-                            img_b64 = base64.b64encode(img_data).decode()
-                            
-                            img_key = f"image_p{page_num+1}_i{img_index+1}"
-                            images[img_key] = {
-                                'data': img_b64,
-                                'page': page_num + 1,
-                                'type': 'document_image',
-                                'width': pix.width,
-                                'height': pix.height
-                            }
-                        pix = None
-                        
-                except Exception as e:
-                    logger.warning(f"Error extracting regular images from page {page_num+1}: {e}")
-            
-            doc.close()
-            os.unlink(tmp_file_path)
-            
-            # Convert image format for backward compatibility
-            image_dict = {}
-            for key, img_info in images.items():
-                if isinstance(img_info, dict):
-                    image_dict[key] = img_info['data']
-                else:
-                    image_dict[key] = img_info
-            
-            # Cache results
-            result = (text, image_dict, formulas)
-            self.cache[cache_key] = result
-            
-            logger.info(f"Enhanced extraction complete: {len(formulas)} elements, {len(image_dict)} images")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error in enhanced PDF processing: {str(e)}")
-            return self._fallback_extraction(uploaded_file)
-    
-    def _extract_enhanced_text(self, page, page_num: int) -> str:
-        """Extract text with enhanced formatting preservation"""
-        try:
-            # Get text with layout information
-            blocks = page.get_text("dict")
-            text_content = []
-            
-            for block in blocks.get("blocks", []):
-                if "lines" in block:
-                    block_text = []
-                    for line in block["lines"]:
-                        line_text = ""
-                        for span in line.get("spans", []):
-                            span_text = span.get("text", "")
-                            # Preserve formatting indicators
-                            if span.get("flags", 0) & 2**4:  # Bold
-                                span_text = f"**{span_text}**"
-                            if span.get("flags", 0) & 2**1:  # Italic
-                                span_text = f"*{span_text}*"
-                            line_text += span_text
-                        if line_text.strip():
-                            block_text.append(line_text.strip())
-                    
-                    if block_text:
-                        text_content.append(" ".join(block_text))
-            
-            return "\n\n".join(text_content)
-            
-        except Exception as e:
-            logger.warning(f"Error in enhanced text extraction: {e}")
-            return page.get_text()
-    
-    def _extract_context(self, page, rect: fitz.Rect, expand: int = 100) -> str:
-        """Extract context around a specific region"""
-        try:
-            # Expand rectangle to get surrounding context
-            context_rect = rect + (-expand, -expand, expand, expand)
-            context_rect = context_rect & page.rect  # Clip to page bounds
-            
-            context_text = page.get_textbox(context_rect)
-            return context_text.strip()
-            
-        except Exception as e:
-            logger.warning(f"Error extracting context: {e}")
-            return ""
-    
-    def _fallback_extraction(self, uploaded_file) -> Tuple[str, Dict[str, str], List[Dict[str, Any]]]:
-        """Fallback extraction method"""
-        try:
-            uploaded_file.seek(0)
-            text = uploaded_file.read().decode('utf-8', errors='ignore')
-            return text, {}, []
-        except Exception as e:
-            logger.error(f"Fallback extraction failed: {e}")
-            return "", {}, []
-
-# Global extractor instance
-pdf_extractor = EnhancedPDFExtractor()
-
 def extract_mathematical_formulas_advanced(text: str, page_num: int = None) -> List[Dict[str, Any]]:
-    """Enhanced mathematical formula extraction with Basel-specific patterns"""
+    """
+    Advanced mathematical formula extraction for Basel regulatory documents
+    """
     formulas = []
     
-    # Enhanced Basel-specific patterns
+    # Enhanced Basel-specific mathematical patterns
     formula_patterns = [
-        # Basel regulatory references
-        (r'MAR\d+\.\d+(?:\.\d+)?[^\n.!?]*', 'basel_mar_reference'),
+        # Basel regulatory references with mathematical context
+        (r'MAR\d+\.\d+(?:\.\d+)?[^\n.!?]*(?:=|formula|calculation)[^\n.!?]*', 'basel_mar_reference'),
         
-        # Risk weight formulas  
-        (r'RW[_\w\d]*\s*=\s*[\d.%\s\+\-\*/\(\)]+', 'risk_weight_formula'),
+        # Complex multi-line formulas (square root with summations)
+        (r'√\s*\(\s*∑[^)]+\+\s*∑∑[^)]+\)', 'complex_square_root_formula'),
         
-        # Capital requirement formulas
-        (r'K[_\w\d]*\s*=\s*[^.!?]*(?:[+\-*/√∑∏]|max|min)[^.!?]*', 'capital_requirement'),
+        # Risk position formulas (Kb = √(...))
+        (r'[A-Z][a-z]*\s*=\s*√\s*\([^)]+\)', 'risk_position_formula'),
         
-        # Correlation formulas
-        (r'ρ[_\w\d]*(?:\([^)]+\))?\s*=\s*[\d.%\s\+\-\*/\(\)]+', 'correlation_formula'),
+        # Capital requirement formulas with min/max
+        (r'[A-Z]+\s*=\s*-?(?:min|max)\s*\([^)]+(?:\([^)]+\))*[^)]*\)', 'capital_requirement_minmax'),
         
-        # Sensitivity measures
-        (r'(?:VaR|PV01|CS01|DV01|Vega)[_\w\d]*\s*=\s*[^.!?]*', 'sensitivity_measure'),
+        # Correlation formulas with exponential decay
+        (r'ρ[_\w\d]*\s*=\s*exp\s*\([^)]+\)', 'exponential_correlation_formula'),
         
-        # Greek letters in formulas
-        (r'[αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ]+[_\w\d\s=+\-*/\(\)]*', 'greek_formula'),
+        # Delta sensitivity definitions
+        (r'(?:PV01|CS01|Delta)\s*=\s*\([^)]+\s*[-+]\s*[^)]+\)\s*/\s*[\d.]+', 'delta_sensitivity_formula'),
         
-        # Mathematical operators
-        (r'(?:sqrt|exp|log|ln|sin|cos|tan)\s*\([^)]+\)', 'mathematical_function'),
+        # Vega risk sensitivity
+        (r'(?:vega|Vega)\s*×\s*σ[_\w\d]*', 'vega_risk_formula'),
         
-        # Complex mathematical expressions
-        (r'\([^)]*[+\-*/=√∑∏]\s*[^)]*\)', 'mathematical_expression'),
+        # Risk weight expressions
+        (r'RW[_\w\d]*\s*=\s*[\d.%]+(?:\s*/\s*√\s*\d+)?', 'risk_weight_formula'),
         
-        # Bucket classifications
-        (r'Bucket\s+(?:number\s+)?\d+[^\n.!?]*', 'bucket_classification'),
+        # Correlation parameters with Greek letters
+        (r'ρ[_\w\d\{\}]*\s*=\s*(?:\d+\.?\d*%?|exp\([^)]+\))', 'correlation_parameter'),
         
-        # Supervisory parameters
-        (r'(?:gamma|phi|alpha|beta|delta|lambda)[_\w\d]*\s*=\s*[\d.%]+', 'supervisory_parameter'),
+        # Gamma correlation formulas
+        (r'γ[_\w\d\{\}]*\s*=\s*[\d.%]+', 'gamma_correlation'),
+        
+        # Complex summation expressions
+        (r'∑[_\w\d]*\s*[^=]*=?[^.!?\n]*', 'summation_expression'),
+        
+        # Product expressions
+        (r'∏[_\w\d]*\s*[^=]*=?[^.!?\n]*', 'product_expression'),
+        
+        # Liquidity horizon formulas
+        (r'LH[_\w\d]*\s*=\s*\d+', 'liquidity_horizon'),
+        
+        # Risk factor shock definitions
+        (r'(?:shock|shift)\s*[=:]\s*[\d.%]+(?:\s*×\s*[\w_]+)?', 'shock_definition'),
+        
+        # Bucket correlation matrices
+        (r'(?:Table|Matrix)\s+\d+[^\n]*correlation[^\n]*', 'correlation_matrix_reference'),
+        
+        # Tenor-based formulas
+        (r'T[_\w\d]*\s*[-+]\s*T[_\w\d]*', 'tenor_difference_formula'),
+        
+        # Greek letters and mathematical symbols
+        (r'[αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ]+', 'greek_symbols'),
+        
+        # Mathematical operators and relations
+        (r'[∑∏∫∆∇±≤≥≠≈∞√∂∈∉⊂⊃∪∩]', 'mathematical_operators'),
+        
+        # Subscripts/superscripts with complex notation
+        (r'\w+[_\^]\{[^}]+\}|\w+[_\^]\([^)]+\)|\w+[_\^\*\+\-\d]+', 'subscript_superscript'),
+        
+        # Basel-specific risk measures
+        (r'(?:CVR|VaR|PV01|CS01|DV01|Vega)[_\w\d]*(?:\s*[=:]\s*[^.!?\n]+)?', 'basel_risk_measures'),
+        
+        # Percentage formulas with context
+        (r'\d+\.?\d*\s*%(?:\s*(?:where|if|when|for)[^.!?\n]*)?', 'percentage_values'),
+        
+        # Mathematical expressions with nested parentheses
+        (r'\([^()]*\([^()]*\)[^()]*\)', 'nested_parenthetical'),
+        
+        # Floor/ceiling functions
+        (r'⌊[^⌋]*⌋|⌈[^⌉]*⌉|floor\([^)]+\)|ceiling\([^)]+\)', 'floor_ceiling_functions'),
+        
+        # Matrix/vector notation
+        (r'\[[^\]]*[+\-*/√∑∏]\s*[^\]]*\]|\{[^}]*[+\-*/√∑∏]\s*[^}]*\}', 'matrix_vector_notation'),
     ]
     
     for pattern, formula_type in formula_patterns:
@@ -621,6 +426,105 @@ def extract_mathematical_formulas_advanced(text: str, page_num: int = None) -> L
     
     return sorted(unique_formulas, key=lambda x: (x['confidence'], x['regulatory_relevance']), reverse=True)
 
+def extract_structured_tables(text: str, page_num: int = None) -> List[Dict[str, Any]]:
+    """
+    Enhanced table extraction for regulatory documents with sophisticated pattern recognition
+    """
+    tables = []
+    
+    # Enhanced table detection patterns for Basel documents
+    table_patterns = [
+        # Table with explicit numbering and title
+        (r'Table\s+\d+[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'numbered_table'),
+        
+        # Risk weight tables
+        (r'Risk\s+weights?[^\n]*(?:Table\s+\d+)?[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'risk_weight_table'),
+        
+        # Correlation matrices
+        (r'(?:Correlation|correlations?)[^\n]*(?:Table\s+\d+)?[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'correlation_table'),
+        
+        # Bucket tables
+        (r'Bucket[^\n]*(?:Table\s+\d+)?[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'bucket_table'),
+        
+        # Delta/Vega/Curvature tables
+        (r'(?:Delta|Vega|Curvature)[^\n]*(?:Table\s+\d+)?[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'risk_type_table'),
+        
+        # Tenor-based tables
+        (r'Tenor[^\n]*\n((?:[^\n]*(?:year|month|day)[^\n]*\n){2,})', 'tenor_table'),
+        
+        # Percentage tables
+        (r'(?:[^\n]*%[^\n]*\|[^\n]*){3,}', 'percentage_table'),
+        
+        # MAR reference tables
+        (r'MAR\d+\.[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'mar_reference_table'),
+        
+        # Multi-column data tables (detecting by pipe separators and consistent structure)
+        (r'(?:[^\n]*\|[^\n]*\|[^\n]*\n){4,}', 'structured_data_table'),
+        
+        # Tables with header rows (detecting bold patterns or caps)
+        (r'([A-Z\s\|]{20,}\n(?:[^\n]*\|[^\n]*\n){3,})', 'header_table'),
+        
+        # Credit quality tables
+        (r'(?:Credit\s+quality|Investment\s+grade|High\s+yield)[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'credit_quality_table'),
+        
+        # Sectoral classification tables
+        (r'Sector[^\n]*\n((?:[^\n]*\|[^\n]*\n){3,})', 'sectoral_table'),
+        
+        # Liquidity horizon tables
+        (r'Liquidity\s+horizon[^\n]*\n((?:[^\n]*\|[^\n]*\n){2,})', 'liquidity_table'),
+    ]
+    
+    for pattern, table_type in table_patterns:
+        matches = re.finditer(pattern, text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+        for match in matches:
+            table_text = match.group()
+            
+            # Enhanced table analysis
+            lines = table_text.strip().split('\n')
+            pipe_lines = [line for line in lines if '|' in line]
+            
+            if len(pipe_lines) >= 3:  # Minimum viable table
+                # Extract metadata
+                table_title = extract_table_title(table_text)
+                columns = extract_table_columns(pipe_lines)
+                table_complexity = assess_table_complexity(pipe_lines)
+                
+                tables.append({
+                    'text': table_text.strip(),
+                    'page': page_num,
+                    'position': match.start(),
+                    'type': table_type,
+                    'rows': len(pipe_lines),
+                    'columns': len(columns) if columns else 0,
+                    'title': table_title,
+                    'column_headers': columns,
+                    'complexity': table_complexity,
+                    'regulatory_relevance': assess_table_regulatory_relevance(table_text, table_type),
+                    'confidence': calculate_table_confidence(table_text, table_type, len(pipe_lines))
+                })
+    
+    return sorted(tables, key=lambda x: x['confidence'], reverse=True)
+
+def extract_table_title(table_text: str) -> str:
+    """Extract table title from table text"""
+    lines = table_text.strip().split('\n')
+    
+    # Look for table number and title patterns
+    title_patterns = [
+        r'Table\s+\d+[^\n]*',
+        r'(?:Risk\s+weights?|Correlation|Bucket)[^\n]*(?:Table\s+\d+)?',
+        r'(?:Delta|Vega|Curvature)[^\n]*',
+        r'MAR\d+\.[^\n]*'
+    ]
+    
+    for line in lines[:3]:  # Check first 3 lines
+        for pattern in title_patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                return match.group().strip()
+    
+    return "Extracted Table"
+
 def calculate_formula_confidence_enhanced(formula_text: str, formula_type: str, context: str) -> float:
     """Enhanced confidence calculation for formulas"""
     confidence = 0.5  # Base confidence
@@ -655,13 +559,6 @@ def calculate_formula_confidence_enhanced(formula_text: str, formula_type: str, 
     context_lower = context.lower()
     keyword_count = sum(1 for keyword in regulatory_keywords if keyword in context_lower)
     confidence += min(keyword_count * 0.05, 0.15)
-    
-    # Numerical content
-    if re.search(r'\d+\.?\d*\s*%', formula_text):
-        confidence += 0.1
-    
-    if re.search(r'\d+\.?\d*', formula_text):
-        confidence += 0.05
     
     return min(confidence, 1.0)
 
@@ -709,10 +606,162 @@ def assess_regulatory_relevance(formula_text: str, context: str) -> float:
     
     return min(relevance_score, 1.0)
 
-# Update main processing functions to use enhanced extractor
+# Continue with remaining helper functions...
+def analyze_document_intelligence(text: str, images: Dict[str, str], formulas: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Enhanced AI-powered document analysis with Basel-specific intelligence"""
+    analysis = {
+        'document_type': 'Unknown',
+        'regulatory_framework': [],
+        'mathematical_complexity': 'Low',
+        'formula_types': [],
+        'table_count': 0,
+        'regulatory_sections': [],
+        'complexity_score': 0,
+        'mathematical_formulas': {
+            'total_count': 0,
+            'by_type': {},
+            'complexity_distribution': {},
+            'key_formulas': []
+        }
+    }
+    
+    if not text:
+        return analysis
+    
+    # Enhanced document analysis implementation
+    if formulas:
+        analysis['mathematical_formulas']['total_count'] = len(formulas)
+        
+        for formula in formulas:
+            if isinstance(formula, dict):
+                formula_type = formula.get('type', 'unknown')
+                if formula_type in analysis['mathematical_formulas']['by_type']:
+                    analysis['mathematical_formulas']['by_type'][formula_type] += 1
+                else:
+                    analysis['mathematical_formulas']['by_type'][formula_type] = 1
+                
+                # Add high-confidence formulas to key formulas
+                confidence = formula.get('confidence', 0)
+                if confidence > 0.7:
+                    analysis['mathematical_formulas']['key_formulas'].append({
+                        'text': formula.get('text', '')[:100],
+                        'type': formula_type,
+                        'confidence': confidence,
+                        'page': formula.get('page', 'Unknown')
+                    })
+    
+    return analysis
+
+def process_document(uploaded_file, extract_images: bool = True, extract_formulas: bool = True) -> Tuple[str, Dict[str, str], List[Dict[str, Any]], Dict[str, Any]]:
+    """Enhanced document processing with enterprise-grade extraction"""
+    if uploaded_file is None:
+        return "", {}, [], {}
+    
+    try:
+        file_type = uploaded_file.type
+        logger.info(f"Processing file: {uploaded_file.name} ({file_type}) with enhanced extraction")
+        
+        if file_type == "application/pdf":
+            document_text, extracted_images, extracted_formulas = extract_images_and_formulas_from_pdf(uploaded_file)
+        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            document_text, extracted_images = extract_images_from_docx(uploaded_file)
+            extracted_formulas = extract_mathematical_formulas_advanced(document_text) if extract_formulas else []
+        elif file_type == "text/plain":
+            document_text = extract_text_from_txt(uploaded_file)
+            extracted_images = {}
+            extracted_formulas = extract_mathematical_formulas_advanced(document_text) if extract_formulas else []
+        else:
+            logger.warning(f"Unsupported file type: {file_type}")
+            uploaded_file.seek(0)
+            document_text = str(uploaded_file.read(), "utf-8", errors='ignore')
+            extracted_images = {}
+            extracted_formulas = extract_mathematical_formulas_advanced(document_text) if extract_formulas else []
+        
+        # Apply extraction options
+        if not extract_images:
+            extracted_images = {}
+        if not extract_formulas:
+            extracted_formulas = []
+        
+        # Perform enhanced document analysis
+        document_analysis = analyze_document_intelligence(document_text, extracted_images, extracted_formulas)
+        
+        logger.info(f"Enhanced extraction complete:")
+        logger.info(f"  - Text: {len(document_text):,} characters")
+        logger.info(f"  - Images: {len(extracted_images)} items")
+        logger.info(f"  - Formulas: {len(extracted_formulas)} items")
+        
+        return document_text, extracted_images, extracted_formulas, document_analysis
+        
+    except Exception as e:
+        logger.error(f"Error processing document: {e}")
+        if 'st' in globals():
+            st.error(f"Error processing document: {str(e)}")
+        return "", {}, [], {}
+
+# Additional helper functions for PDF processing
 def extract_images_and_formulas_from_pdf(uploaded_file) -> Tuple[str, Dict[str, str], List[Dict[str, Any]]]:
-    """Enhanced PDF extraction - main entry point"""
-    return pdf_extractor.extract_images_and_formulas_from_pdf_enhanced(uploaded_file)
+    """Enhanced PDF extraction with better formula and structure detection"""
+    if not FITZ_AVAILABLE:
+        logger.error("PyMuPDF not available for PDF processing")
+        try:
+            text = uploaded_file.read().decode('utf-8', errors='ignore')
+            return text, {}, []
+        except Exception as e:
+            logger.error(f"Error reading PDF as text: {e}")
+            return "", {}, []
+    
+    text = ""
+    images = {}
+    formulas = []
+    
+    try:
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            uploaded_file.seek(0)
+            tmp_file.write(uploaded_file.read())
+            tmp_file_path = tmp_file.name
+        
+        # Open PDF with fitz
+        doc = fitz.open(tmp_file_path)
+        
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            
+            # Extract text with better formatting preservation
+            page_text = page.get_text("text")
+            text += f"\n=== PAGE {page_num + 1} ===\n{page_text}\n"
+            
+            # Extract mathematical formulas from this page
+            page_formulas = extract_mathematical_formulas_advanced(page_text, page_num + 1)
+            formulas.extend(page_formulas)
+            
+            # Extract tables from this page
+            page_tables = extract_structured_tables(page_text, page_num + 1)
+            for table in page_tables:
+                formulas.append({
+                    'text': table['text'][:200] + '...' if len(table['text']) > 200 else table['text'],
+                    'type': 'structured_table',
+                    'page': table['page'],
+                    'position': table['position'],
+                    'context': f"Table with {table['rows']} rows",
+                    'confidence': 0.9
+                })
+        
+        doc.close()
+        os.unlink(tmp_file_path)
+        
+        logger.info(f"Extracted {len(formulas)} mathematical elements and {len(images)} images")
+        return text, images, formulas
+        
+    except Exception as e:
+        logger.error(f"Error processing PDF: {str(e)}")
+        try:
+            uploaded_file.seek(0)
+            text = uploaded_file.read().decode('utf-8', errors='ignore')
+        except:
+            text = "Error reading PDF content"
+        return text, {}, []
 
 def extract_images_from_docx(uploaded_file) -> Tuple[str, Dict[str, str]]:
     """Extract text and images from DOCX with enhanced processing"""
@@ -750,17 +799,7 @@ def extract_images_from_docx(uploaded_file) -> Tuple[str, Dict[str, str]]:
                 if "image" in rel.target_ref:
                     try:
                         image_data = rel.target_part.blob
-                        
-                        # Enhance image if it appears to be mathematical/tabular
-                        if len(image_data) < 500000:  # Only enhance smaller images
-                            try:
-                                enhanced_data = EnterpriseImageProcessor.enhance_mathematical_image(image_data)
-                                img_b64 = base64.b64encode(enhanced_data).decode()
-                            except:
-                                img_b64 = base64.b64encode(image_data).decode()
-                        else:
-                            img_b64 = base64.b64encode(image_data).decode()
-                        
+                        img_b64 = base64.b64encode(image_data).decode()
                         images[f"docx_img_{len(images)+1}"] = img_b64
                         
                     except Exception as e:
@@ -882,283 +921,4 @@ def render_content_with_images(content: str, images: Dict[str, str]):
                             break
                     
                     if not found:
-                        st.info(f"📊 Referenced content: {image_key}")
-
-def analyze_document_intelligence(text: str, images: Dict[str, str], formulas: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Enhanced AI-powered document analysis with enterprise-grade intelligence"""
-    analysis = {
-        'document_type': 'Unknown',
-        'regulatory_framework': [],
-        'key_entities': [],
-        'complexity_score': 0,
-        'compliance_indicators': [],
-        'stakeholder_mentions': [],
-        'risk_indicators': [],
-        'timeline_references': [],
-        'mathematical_complexity': 'Low',
-        'formula_types': [],
-        'table_count': 0,
-        'regulatory_sections': [],
-        'image_analysis': {},
-        'extraction_quality': {},
-        'document_structure': {}
-    }
-    
-    if not text:
-        return analysis
-    
-    text_lower = text.lower()
-    
-    # Enhanced document type detection
-    doc_type_patterns = {
-        'basel_regulatory': ['basel', 'mar21', 'mar22', 'mar23', 'supervisory', 'committee on banking supervision'],
-        'risk_management': ['var', 'risk management', 'pv01', 'cs01', 'market risk', 'credit risk', 'operational risk'],
-        'compliance': ['compliance', 'regulatory', 'sox', 'gdpr', 'regulation', 'supervisory'],
-        'financial_reporting': ['financial', 'accounting', 'ifrs', 'gaap', 'reporting', 'statement'],
-        'technical_specification': ['api', 'technical', 'specification', 'system', 'architecture', 'implementation']
-    }
-    
-    max_score = 0
-    detected_type = 'Unknown'
-    
-    for doc_type, patterns in doc_type_patterns.items():
-        score = sum(text_lower.count(pattern.lower()) for pattern in patterns)
-        if score > max_score:
-            max_score = score
-            detected_type = doc_type.replace('_', ' ').title()
-    
-    analysis['document_type'] = detected_type
-    
-    # Enhanced regulatory framework detection
-    frameworks = {
-        'Basel III/IV': ['basel', 'basel iii', 'basel iv', 'mar21', 'mar22', 'mar23'],
-        'Solvency II': ['solvency', 'solvency ii', 'eiopa'],
-        'MiFID II': ['mifid', 'mifid ii', 'esma'],
-        'GDPR': ['gdpr', 'data protection', 'privacy regulation'],
-        'SOX': ['sox', 'sarbanes oxley', 'sarbanes-oxley'],
-        'IFRS': ['ifrs', 'international financial reporting'],
-        'Dodd-Frank': ['dodd frank', 'dodd-frank', 'volcker']
-    }
-    
-    detected_frameworks = []
-    for framework, keywords in frameworks.items():
-        if any(keyword in text_lower for keyword in keywords):
-            detected_frameworks.append(framework)
-    
-    analysis['regulatory_framework'] = detected_frameworks
-    
-    # Enhanced mathematical complexity analysis
-    if formulas:
-        formula_types = set()
-        complexity_scores = []
-        
-        for formula in formulas:
-            if isinstance(formula, dict):
-                formula_type = formula.get('type', 'unknown')
-                formula_types.add(formula_type)
-                
-                # Get mathematical complexity
-                math_complexity = formula.get('mathematical_complexity', 'Low')
-                complexity_mapping = {'Low': 1, 'Medium': 2, 'High': 3, 'Very High': 4}
-                complexity_scores.append(complexity_mapping.get(math_complexity, 1))
-        
-        analysis['formula_types'] = list(formula_types)
-        
-        # Determine overall mathematical complexity
-        if complexity_scores:
-            avg_complexity = sum(complexity_scores) / len(complexity_scores)
-            if avg_complexity >= 3.5:
-                analysis['mathematical_complexity'] = 'Very High'
-            elif avg_complexity >= 2.5:
-                analysis['mathematical_complexity'] = 'High'
-            elif avg_complexity >= 1.5:
-                analysis['mathematical_complexity'] = 'Medium'
-            else:
-                analysis['mathematical_complexity'] = 'Low'
-        
-        # High complexity indicators
-        high_complexity_types = [
-            'basel_mar_reference', 'capital_requirement', 'correlation_formula',
-            'sensitivity_measure', 'advanced_mathematical_expression'
-        ]
-        
-        if any(ftype in high_complexity_types for ftype in formula_types):
-            if analysis['mathematical_complexity'] in ['Low', 'Medium']:
-                analysis['mathematical_complexity'] = 'High'
-    
-    # Enhanced image analysis
-    image_analysis = {
-        'total_images': len(images),
-        'mathematical_images': 0,
-        'table_images': 0,
-        'diagram_images': 0,
-        'document_images': 0
-    }
-    
-    for img_key, img_data in images.items():
-        if isinstance(img_data, dict):
-            img_type = img_data.get('type', 'unknown')
-            element_type = img_data.get('element_type', 'unknown')
-        else:
-            # Infer from key name
-            if 'math' in img_key.lower() or 'formula' in img_key.lower():
-                img_type = 'mathematical_formula'
-            elif 'table' in img_key.lower():
-                img_type = 'regulatory_table'
-            else:
-                img_type = 'document_image'
-            element_type = img_type
-        
-        if img_type == 'mathematical_formula':
-            image_analysis['mathematical_images'] += 1
-        elif img_type == 'regulatory_table':
-            image_analysis['table_images'] += 1
-        elif 'diagram' in img_type:
-            image_analysis['diagram_images'] += 1
-        else:
-            image_analysis['document_images'] += 1
-    
-    analysis['image_analysis'] = image_analysis
-    
-    # Enhanced regulatory section detection
-    section_patterns = [
-        r'(MAR\d+\.\d+(?:\.\d+)?[^\n.!?]*)',  # Basel MAR sections
-        r'(\d+\.\d+(?:\.\d+)?\s+[A-Z][^\n.!?]*)',  # Numbered sections
-        r'([A-Z][A-Z\s]{3,}:?\s*[A-Z][^\n.!?]*)',  # All caps headings
-        r'(Article\s+\d+[^\n.!?]*)',  # Article references
-        r'(Section\s+\d+[^\n.!?]*)',  # Section references
-        r'(Chapter\s+\d+[^\n.!?]*)',  # Chapter references
-    ]
-    
-    regulatory_sections = []
-    for pattern in section_patterns:
-        matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
-        regulatory_sections.extend(matches[:15])  # Limit to prevent overflow
-    
-    analysis['regulatory_sections'] = regulatory_sections
-    
-    # Enhanced entity extraction
-    entity_patterns = [
-        r'\b[A-Z][a-zA-Z]+ [A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?\b',  # Names/Organizations
-        r'\b(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}\b',  # Dates
-        r'\$\d+(?:,\d{3})*(?:\.\d{2})?\b',  # Money amounts
-        r'\b\d+\.?\d*\s*%\b',  # Percentages
-        r'\bMAR\d+\.\d+\b',  # Basel MAR references
-        r'\bBucket\s+\d+\b',  # Bucket classifications
-        r'\b[A-Z]{2,5}\d+\b',  # Regulatory codes
-    ]
-    
-    key_entities = []
-    for pattern in entity_patterns:
-        try:
-            matches = re.findall(pattern, text)
-            # Filter and clean matches
-            filtered_matches = [m for m in matches if len(m.strip()) > 2]
-            key_entities.extend(filtered_matches[:20])  # Limit results
-        except Exception as e:
-            logger.warning(f"Error in entity extraction: {e}")
-    
-    analysis['key_entities'] = list(set(key_entities))  # Remove duplicates
-    
-    # Enhanced complexity scoring
-    complexity_factors = [
-        len(text) > 100000,  # Very large document
-        len(images) > 20,  # Many images
-        len(formulas) > 15,  # Many formulas
-        len(detected_frameworks) > 2,  # Multiple regulations
-        image_analysis['mathematical_images'] > 5,  # Many math images
-        image_analysis['table_images'] > 5,  # Many table images
-        'correlation' in text_lower,  # Complex correlations
-        'curvature' in text_lower,  # Advanced risk concepts
-        len(regulatory_sections) > 20,  # Many sections
-        any('very high' in str(f.get('mathematical_complexity', '')).lower() for f in formulas),  # Very high math complexity
-    ]
-    
-    analysis['complexity_score'] = sum(complexity_factors) / len(complexity_factors)
-    
-    # Document structure analysis
-    structure_analysis = {
-        'has_table_of_contents': 'contents' in text_lower or 'table of contents' in text_lower,
-        'has_executive_summary': 'executive summary' in text_lower or 'summary' in text_lower,
-        'has_appendices': 'appendix' in text_lower or 'annexe' in text_lower,
-        'section_count': len(regulatory_sections),
-        'average_section_length': len(text) / max(len(regulatory_sections), 1),
-        'mathematical_content_ratio': len(formulas) / max(len(text.split()), 1) * 1000,  # Formulas per 1000 words
-    }
-    
-    analysis['document_structure'] = structure_analysis
-    
-    # Extraction quality metrics
-    extraction_quality = {
-        'text_extraction_quality': 'High' if len(text) > 1000 else 'Low',
-        'image_extraction_success': len(images) > 0,
-        'formula_extraction_success': len(formulas) > 0,
-        'mathematical_content_detected': analysis['mathematical_complexity'] != 'Low',
-        'regulatory_content_detected': len(detected_frameworks) > 0,
-        'overall_extraction_score': 0
-    }
-    
-    # Calculate overall extraction score
-    score_factors = [
-        extraction_quality['text_extraction_quality'] == 'High',
-        extraction_quality['image_extraction_success'],
-        extraction_quality['formula_extraction_success'],
-        extraction_quality['mathematical_content_detected'],
-        extraction_quality['regulatory_content_detected']
-    ]
-    
-    extraction_quality['overall_extraction_score'] = sum(score_factors) / len(score_factors)
-    analysis['extraction_quality'] = extraction_quality
-    
-    return analysis
-
-def process_document(uploaded_file, extract_images: bool = True, extract_formulas: bool = True) -> Tuple[str, Dict[str, str], List[Dict[str, Any]], Dict[str, Any]]:
-    """Enhanced document processing with enterprise-grade extraction"""
-    if uploaded_file is None:
-        return "", {}, [], {}
-    
-    try:
-        file_type = uploaded_file.type
-        logger.info(f"Processing file: {uploaded_file.name} ({file_type}) with enhanced extraction")
-        
-        if file_type == "application/pdf":
-            document_text, extracted_images, extracted_formulas = extract_images_and_formulas_from_pdf(uploaded_file)
-        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            document_text, extracted_images = extract_images_from_docx(uploaded_file)
-            extracted_formulas = extract_mathematical_formulas_advanced(document_text) if extract_formulas else []
-        elif file_type == "text/plain":
-            document_text = extract_text_from_txt(uploaded_file)
-            extracted_images = {}
-            extracted_formulas = extract_mathematical_formulas_advanced(document_text) if extract_formulas else []
-        else:
-            logger.warning(f"Unsupported file type: {file_type}")
-            uploaded_file.seek(0)
-            document_text = str(uploaded_file.read(), "utf-8", errors='ignore')
-            extracted_images = {}
-            extracted_formulas = extract_mathematical_formulas_advanced(document_text) if extract_formulas else []
-        
-        # Apply extraction options
-        if not extract_images:
-            extracted_images = {}
-        if not extract_formulas:
-            extracted_formulas = []
-        
-        # Perform enhanced document analysis
-        document_analysis = analyze_document_intelligence(document_text, extracted_images, extracted_formulas)
-        
-        # Log extraction results
-        logger.info(f"Enhanced extraction complete:")
-        logger.info(f"  - Text: {len(document_text):,} characters")
-        logger.info(f"  - Images: {len(extracted_images)} items")
-        logger.info(f"  - Formulas: {len(extracted_formulas)} items")
-        logger.info(f"  - Document type: {document_analysis.get('document_type', 'Unknown')}")
-        logger.info(f"  - Mathematical complexity: {document_analysis.get('mathematical_complexity', 'Unknown')}")
-        logger.info(f"  - Regulatory frameworks: {len(document_analysis.get('regulatory_framework', []))}")
-        
-        return document_text, extracted_images, extracted_formulas, document_analysis
-        
-    except Exception as e:
-        logger.error(f"Error processing document: {e}")
-        if 'st' in globals():
-            st.error(f"Error processing document: {str(e)}")
-        return "", {}, [], {}
+                        st.info(f"Referenced content: {image_key}")
