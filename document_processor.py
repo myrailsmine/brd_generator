@@ -929,6 +929,183 @@ def render_content_with_images(content: str, images: Dict[str, str]):
             else:
                 st.info(f"Image reference: {image_key} (not found)")
 
+def process_document_enhanced(uploaded_file, extract_images: bool = True, extract_formulas: bool = True, extract_tables: bool = True) -> Tuple[str, Dict[str, str], List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Enhanced document processing with comprehensive table and formula extraction
+    """
+    if uploaded_file is None:
+        return "", {}, [], {}
+    
+    try:
+        file_type = uploaded_file.type
+        logger.info(f"Processing file: {uploaded_file.name} ({file_type})")
+        
+        if file_type == "application/pdf":
+            document_text, extracted_images, extracted_formulas, extracted_tables = extract_images_and_formulas_from_pdf_enhanced(uploaded_file)
+        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            document_text, extracted_images, extracted_formulas, extracted_tables = extract_images_from_docx_enhanced(uploaded_file)
+        elif file_type == "text/plain":
+            document_text, extracted_formulas, extracted_tables = extract_text_from_txt_enhanced(uploaded_file)
+            extracted_images = {}
+        else:
+            logger.warning(f"Unsupported file type: {file_type}")
+            uploaded_file.seek(0)
+            document_text = str(uploaded_file.read(), "utf-8", errors='ignore')
+            extracted_images = {}
+            extracted_formulas = extract_enhanced_mathematical_formulas(document_text) if extract_formulas else []
+            extracted_tables = extract_tables_from_text(document_text) if extract_tables else []
+        
+        # Apply extraction options
+        if not extract_images:
+            extracted_images = {}
+        if not extract_formulas:
+            # Remove formulas but keep tables if they were extracted
+            extracted_formulas = [item for item in extracted_formulas if item.get('type') in ['extracted_table', 'docx_table']]
+        if not extract_tables:
+            # Remove tables but keep formulas
+            extracted_formulas = [item for item in extracted_formulas if item.get('type') not in ['extracted_table', 'docx_table']]
+            extracted_tables = []
+        
+        # Separate tables from formulas for analysis
+        if not hasattr(extracted_tables, '__len__'):
+            extracted_tables = [item for item in extracted_formulas if item.get('type') in ['extracted_table', 'docx_table']]
+        
+        # Enhanced document analysis with table and formula insights
+        document_analysis = analyze_document_intelligence_enhanced(document_text, extracted_images, extracted_formulas, extracted_tables)
+        
+        logger.info(f"Enhanced extraction: {len(extracted_formulas)} elements ({document_analysis['formula_analysis'].get('total_formulas', 0)} formulas + {len(extracted_tables)} tables), {len(extracted_images)} images")
+        
+        return document_text, extracted_images, extracted_formulas, document_analysis
+        
+    except Exception as e:
+        logger.error(f"Error processing document: {e}")
+        if 'st' in globals():
+            st.error(f"Error processing document: {str(e)}")
+        return "", {}, [], {}
+
+def render_enhanced_extraction_results(document_analysis: Dict[str, Any], extracted_images: Dict[str, str]):
+    """
+    Render enhanced extraction results in Streamlit
+    """
+    if not document_analysis:
+        return
+    
+    # Display enhanced metrics
+    st.subheader("Enhanced Extraction Results")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        formula_count = document_analysis.get('formula_analysis', {}).get('total_formulas', 0)
+        st.metric("Mathematical Formulas", formula_count)
+    
+    with col2:
+        table_count = document_analysis.get('table_count', 0)
+        st.metric("Extracted Tables", table_count)
+    
+    with col3:
+        image_count = len(extracted_images)
+        st.metric("Images", image_count)
+    
+    with col4:
+        complexity = document_analysis.get('mathematical_complexity', 'Unknown')
+        st.metric("Math Complexity", complexity)
+    
+    # Display formula analysis
+    formula_analysis = document_analysis.get('formula_analysis', {})
+    if formula_analysis:
+        st.subheader("Formula Analysis")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.info(f"**Formula Types Found:** {len(formula_analysis.get('formula_types', []))}")
+            for formula_type in formula_analysis.get('formula_types', [])[:5]:
+                st.write(f"• {formula_type.replace('_', ' ').title()}")
+        
+        with col2:
+            avg_confidence = formula_analysis.get('avg_confidence', 0)
+            st.success(f"**Average Confidence:** {avg_confidence:.1%}")
+            high_conf = formula_analysis.get('high_confidence_formulas', 0)
+            st.write(f"High confidence formulas: {high_conf}")
+        
+        with col3:
+            complexity_indicators = formula_analysis.get('complexity_indicators', {})
+            st.warning("**Complexity Indicators:**")
+            for indicator, present in complexity_indicators.items():
+                icon = "✅" if present else "❌"
+                st.write(f"{icon} {indicator.replace('_', ' ').title()}")
+    
+    # Display table analysis
+    table_analysis = document_analysis.get('table_analysis', {})
+    if table_analysis:
+        st.subheader("Table Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.info(f"**Total Tables:** {table_analysis.get('total_tables', 0)}")
+            st.info(f"**Large Tables:** {table_analysis.get('large_tables', 0)}")
+            st.info(f"**Average Confidence:** {table_analysis.get('avg_confidence', 0):.1%}")
+        
+        with col2:
+            structural_info = table_analysis.get('structural_info', {})
+            st.success("**Structural Elements Found:**")
+            for element, present in structural_info.items():
+                if isinstance(present, bool):
+                    icon = "✅" if present else "❌"
+                    st.write(f"{icon} {element.replace('_', ' ').title()}")
+                else:
+                    st.write(f"• {element.replace('_', ' ').title()}: {present}")
+    
+    # Display extraction visualization
+    extracted_tables = document_analysis.get('extracted_tables', [])
+    extracted_formulas = document_analysis.get('extracted_formulas', [])
+    
+    if extracted_tables or extracted_formulas:
+        with st.expander("📊 View Extracted Tables and Formulas", expanded=False):
+            # Create tabs for different views
+            tab1, tab2, tab3 = st.tabs(["Summary View", "Detailed Tables", "Detailed Formulas"])
+            
+            with tab1:
+                # Create and display HTML visualization
+                html_viz = create_table_formula_visualization(extracted_tables, extracted_formulas)
+                st.components.v1.html(html_viz, height=600, scrolling=True)
+            
+            with tab2:
+                if extracted_tables:
+                    for i, table in enumerate(extracted_tables):
+                        st.write(f"**Table {i+1}** (Confidence: {table.get('confidence', 0):.1%})")
+                        st.code(table.get('text', ''), language='text')
+                        st.caption(f"Rows: {table.get('rows', 0)}, Columns: {table.get('columns', 0)}, Page: {table.get('page', 'N/A')}")
+                        st.divider()
+                else:
+                    st.info("No tables extracted from document")
+            
+            with tab3:
+                formula_only = [f for f in extracted_formulas if f.get('type') not in ['extracted_table', 'docx_table']]
+                if formula_only:
+                    # Group by formula type
+                    formula_groups = {}
+                    for formula in formula_only:
+                        formula_type = formula.get('type', 'unknown')
+                        if formula_type not in formula_groups:
+                            formula_groups[formula_type] = []
+                        formula_groups[formula_type].append(formula)
+                    
+                    for formula_type, formulas in formula_groups.items():
+                        st.subheader(f"{formula_type.replace('_', ' ').title()} ({len(formulas)})")
+                        for i, formula in enumerate(formulas):
+                            confidence = formula.get('confidence', 0)
+                            confidence_color = "🟢" if confidence > 0.7 else "🟡" if confidence > 0.5 else "🔴"
+                            st.write(f"**Formula {i+1}** {confidence_color} {confidence:.1%}")
+                            st.code(formula.get('text', ''), language='text')
+                            if formula.get('context'):
+                                st.caption(f"Context: {formula.get('context', '')[:200]}...")
+                            st.divider()
+                else:
+                    st.info("No mathematical formulas extracted from document")
+
 def process_document(uploaded_file, extract_images: bool = True, extract_formulas: bool = True) -> Tuple[str, Dict[str, str], List[Dict[str, Any]], Dict[str, Any]]:
     """
     Main document processing function - now with enhanced table and formula extraction
