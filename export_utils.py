@@ -1,5 +1,6 @@
 """
 Enhanced Export Utilities with Media Embedding Support
+Complete implementation for Word, PDF, Excel, and JSON exports
 """
 
 import pandas as pd
@@ -251,8 +252,7 @@ def add_image_to_word(doc, image_section: str, document_analysis: Dict[str, Any]
             img_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             
             # Calculate appropriate size (max 6 inches width)
-            run = img_paragraph.runs[0] if img_paragraph.runs else img_paragraph.add_run()
-            doc_img = doc.add_picture(img_stream, width=Inches(6))
+            doc.add_picture(img_stream, width=Inches(6))
             
         else:
             # Fallback without PIL
@@ -677,4 +677,124 @@ def add_standard_content_to_pdf(story, brd_content: Dict[str, Any], styles):
             clean_text = re.sub(r'\[IMAGE:\s*[^\]]+\]', '[Image Reference]', str(content))
             story.append(Paragraph(clean_text, styles['Normal']))
         
-        story.append(
+        story.append(Spacer(1, 20))
+
+# Keep the original export functions but update them to use enhanced versions
+
+def export_to_word_docx(brd_content: Dict[str, Any]) -> BytesIO:
+    """Original Word export function - now calls enhanced version"""
+    return export_to_word_docx_enhanced(brd_content)
+
+def export_to_pdf(brd_content: Dict[str, Any]) -> BytesIO:
+    """Original PDF export function - now calls enhanced version"""
+    return export_to_pdf_enhanced(brd_content)
+
+def export_to_excel(brd_content: Dict[str, Any]) -> BytesIO:
+    """Export BRD content to Excel (unchanged - no media embedding needed)"""
+    try:
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            sheet_count = 1
+            
+            for section_name, content in brd_content.items():
+                if isinstance(content, dict):
+                    for subsection_name, subcontent in content.items():
+                        if isinstance(subcontent, pd.DataFrame) and not subcontent.empty:
+                            # Create safe sheet name
+                            sheet_name = f"Sheet{sheet_count}_{subsection_name.split('.')[0]}"[:31]
+                            sheet_name = re.sub(r'[^\w\s-]', '', sheet_name).strip()[:31]
+                            
+                            try:
+                                subcontent.to_excel(writer, sheet_name=sheet_name, index=False)
+                                sheet_count += 1
+                            except Exception as e:
+                                logger.warning(f"Error writing sheet {sheet_name}: {e}")
+                elif isinstance(content, pd.DataFrame) and not content.empty:
+                    # Create safe sheet name  
+                    sheet_name = f"Sheet{sheet_count}_{section_name.split('.')[0]}"[:31]
+                    sheet_name = re.sub(r'[^\w\s-]', '', sheet_name).strip()[:31]
+                    
+                    try:
+                        content.to_excel(writer, sheet_name=sheet_name, index=False)
+                        sheet_count += 1
+                    except Exception as e:
+                        logger.warning(f"Error writing sheet {sheet_name}: {e}")
+        
+        buffer.seek(0)
+        return buffer
+    
+    except Exception as e:
+        logger.error(f"Error exporting to Excel: {e}")
+        raise
+
+def export_to_json(brd_content: Dict[str, Any]) -> str:
+    """Export BRD content to JSON format (unchanged)"""
+    try:
+        import json
+        
+        # Convert DataFrames to dictionaries for JSON serialization
+        json_content = {}
+        for section_name, content in brd_content.items():
+            if isinstance(content, dict):
+                json_content[section_name] = {}
+                for subsection_name, subcontent in content.items():
+                    if isinstance(subcontent, pd.DataFrame):
+                        json_content[section_name][subsection_name] = subcontent.to_dict('records')
+                    else:
+                        json_content[section_name][subsection_name] = str(subcontent)
+            elif isinstance(content, pd.DataFrame):
+                json_content[section_name] = content.to_dict('records')
+            else:
+                json_content[section_name] = str(content)
+        
+        return json.dumps(json_content, indent=2, ensure_ascii=False)
+    
+    except Exception as e:
+        logger.error(f"Error exporting to JSON: {e}")
+        raise
+
+# Enhanced export function for documents with embedded media
+def export_enhanced_document(brd_content: Dict[str, Any], document_analysis: Dict[str, Any], export_format: str) -> BytesIO:
+    """
+    Export enhanced document with embedded media in specified format
+    
+    Args:
+        brd_content: The BRD content dictionary
+        document_analysis: Document analysis with embedded media
+        export_format: 'word', 'pdf', 'excel', or 'json'
+    
+    Returns:
+        BytesIO: Exported document buffer
+    """
+    if export_format.lower() == 'word':
+        return export_to_word_docx_enhanced(brd_content, document_analysis)
+    elif export_format.lower() == 'pdf':
+        return export_to_pdf_enhanced(brd_content, document_analysis)
+    elif export_format.lower() == 'excel':
+        return export_to_excel(brd_content)
+    elif export_format.lower() == 'json':
+        json_content = export_to_json(brd_content)
+        buffer = BytesIO()
+        buffer.write(json_content.encode('utf-8'))
+        buffer.seek(0)
+        return buffer
+    else:
+        raise ValueError(f"Unsupported export format: {export_format}")
+
+# Utility function to validate export requirements
+def validate_export_requirements(export_format: str) -> Dict[str, bool]:
+    """
+    Validate if required libraries are available for export format
+    
+    Returns:
+        Dict with availability status for each requirement
+    """
+    requirements = {
+        'word': DOCX_AVAILABLE,
+        'pdf': REPORTLAB_AVAILABLE,
+        'excel': True,  # pandas is required anyway
+        'json': True,   # built-in json module
+        'images': PIL_AVAILABLE
+    }
+    
+    return requirements
